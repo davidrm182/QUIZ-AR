@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Quiz Pro</title>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 12px; shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button { display: block; width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; font-size: 16px; }
+        .oculto { display: none; }
+        label { display: block; padding: 10px; background: #eee; margin: 5px 0; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="pantalla-inicio" class="card">
+        <h1>Configura tu Test</h1>
+        <h3>1. Selecciona Temas:</h3>
+        <label><input type="checkbox" class="tema-check" value="tema1"> Tema 1</label>
+        <label><input type="checkbox" class="tema-check" value="tema2"> Tema 2</label>
+        
+        <h3>2. Preguntas:</h3>
+        <select id="num-preguntas" style="width:100%; padding:10px; margin-bottom:20px;">
+            <option value="10">10 preguntas</option>
+            <option value="25">25 preguntas</option>
+            <option value="50">50 preguntas</option>
+        </select>
+        <button onclick="prepararQuiz()" style="background:#4CAF50; color:white; font-weight:bold;">¡EMPEZAR!</button>
+    </div>
+
+    <div id="pantalla-quiz" class="card oculto">
+        <h2 id="contador" style="font-size:14px; color:gray;"></h2>
+        <div id="pregunta" style="font-size:18px; font-weight:bold; margin-bottom:20px;"></div>
+        <div id="opciones"></div>
+        <button id="btn-blanco" onclick="dejarEnBlanco()" style="background:#bbb;">Dejar en Blanco</button>
+        <button id="btn-siguiente" class="oculto" onclick="siguiente()" style="background:#2196F3; color:white;">Siguiente</button>
+    </div>
+
+    <div id="pantalla-final" class="card oculto">
+        <div id="resultado"></div>
+        <button onclick="location.reload()">Nuevo Test</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
