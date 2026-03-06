@@ -1,15 +1,29 @@
 const SHEET_ID = '16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8';
 const PIN_CORRECTO = "1989"; // CAMBIA TU PIN AQUÍ
 
-// Función para desbloquear
+// PEGA AQUÍ LA URL QUE HAS COPIADO EN EL PASO ANTERIOR
+const URL_LOGS = "https://script.google.com/macros/s/AKfycbwiUXCd7rafjpUsDIXTGXXCqwiNzflNCvHfagwMRthSRoKNZs2kLNISA1Cz0mYNVYIjcA/exec"; 
+
+function registrarLog(accion, pin, resultado) {
+    fetch(URL_LOGS, {
+        method: 'POST',
+        mode: 'no-cors', // Importante para que no de error de seguridad
+        body: JSON.stringify({ accion: accion, pin: pin, resultado: resultado })
+    });
+}
+
 function validarPin() {
     const input = document.getElementById('pin-input').value;
+    const errorMsg = document.getElementById('error-pin');
+    
     if (input === PIN_CORRECTO) {
+        registrarLog("Login", "*****", "✅ ACCÉS CORRECTE"); // No enviamos el PIN real por privacidad si quieres
         document.getElementById('pantalla-bloqueo').classList.add('oculto');
         document.getElementById('contingut-protegit').classList.remove('oculto');
-        generarChecks(); // Esto rellena las listas solo una vez al entrar
+        generarChecks();
     } else {
-        document.getElementById('error-pin').classList.remove('oculto');
+        registrarLog("Login", input, "❌ PIN INCORRECTE");
+        errorMsg.classList.remove('oculto');
         document.getElementById('pin-input').value = "";
     }
 }
