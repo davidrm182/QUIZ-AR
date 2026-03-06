@@ -1,104 +1,37 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opos Agent Rural - Privat</title>
-    <style>
-        :root { --bg: #1a3c1a; --card: #2d2419; --text: #e8e8e8; --accent: #ffcc00; }
-        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; padding: 20px; background: var(--bg); color: var(--text); }
-        .card { background: var(--card); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); border: 2px solid #5d4037; }
-        .oculto { display: none !important; }
-        input[type="password"] { width: 100%; padding: 15px; font-size: 24px; text-align: center; border-radius: 10px; border: 2px solid #5d4037; background: #3e3123; color: white; margin-bottom: 20px; box-sizing: border-box; }
-        button { display: block; width: 100%; padding: 16px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-size: 16px; background: #5d4037; color: white; font-weight: bold; }
-        .btn-check { background: #ff9800 !important; color: #1a1a1a !important; }
-        label { display: flex; align-items: center; padding: 10px; background: #3e3123; margin: 4px 0; border-radius: 8px; border: 1px solid #5d4037; font-size: 14px; }
-        select { width: 100%; padding: 12px; border-radius: 8px; background: #3e3123; color: white; border: 1px solid #5d4037; margin-bottom: 10px; }
-        #timer { font-size: 30px; font-weight: bold; color: var(--accent); text-align: center; font-family: monospace; }
-        h1, h3 { text-align: center; text-transform: lowercase; color: #ff9800; }
-        .btn-mini { width: auto; display: inline-block; padding: 5px 10px; font-size: 11px; background: #444; margin: 0 2px; }
-    </style>
-</head>
-<body>
-
-    <div id="pantalla-bloqueo" class="card" style="margin-top: 50px;">
-        <h1>🔒 accés restringit</h1>
-        <p style="text-align:center">introdueix el codi d'agent:</p>
-        <input type="password" id="pin-input" placeholder="****">
-        <button onclick="validarPin()" class="btn-check">entrar</button>
-        <p id="error-pin" class="oculto" style="color: #ff4444; text-align:center;">codi incorrecte!</p>
-    </div>
-
-    <div id="contingut-protegit" class="oculto">
-        <div id="pantalla-inicio" class="card">
-            <h1>opos agent rural</h1>
-            <div style="display:flex; justify-content: space-between; align-items: center;">
-                <h3>temari general</h3>
-                <div><button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button><button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button></div>
-            </div>
-            <div id="lista-general"></div>
-            <div style="display:flex; justify-content: space-between; align-items: center; margin-top:20px;">
-                <h3>temari específic</h3>
-                <div><button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button><button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button></div>
-            </div>
-            <div id="lista-especifico"></div>
-            <h3>configuració</h3>
-            <select id="tiempo-test"><option value="30">30 minuts</option><option value="60">60 minuts</option></select>
-            <select id="num-preguntas"><option value="10">10 preguntes</option><option value="25">25 preguntes</option><option value="80">80 preguntes</option></select>
-            <button onclick="prepararQuiz()" class="btn-check">comencem!</button>
-        </div>
-
-        <div id="pantalla-quiz" class="card oculto">
-            <div id="timer">00:00</div>
-            <h2 id="contador" style="font-size:12px; color:#aaa; text-align:center;"></h2>
-            <div id="pregunta" style="font-size:18px; font-weight:bold; margin:20px 0; text-align:center;"></div>
-            <div id="opciones"></div>
-            <hr style="border:0; border-top:1px solid #5d4037; margin:20px 0;">
-            <button id="btn-siguiente" onclick="gestionarSiguiente()" style="background:var(--accent); color:#1a1a1a;">següent ➔</button>
-        </div>
-
-        <div id="pantalla-final" class="card oculto">
-            <div id="resultado"></div>
-            <button onclick="location.reload()" class="btn-check">nou test</button>
+<div id="pantalla-inicio" class="card">
+    <h1>opos agent rural</h1>
+    
+    <div style="display:flex; justify-content: space-between; align-items: center;">
+        <h3>temari general</h3>
+        <div>
+            <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
+            <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
         </div>
     </div>
+    <div id="lista-general"></div>
 
-    <script src="script.js"></script>
-</body>
-</html>
-            </div>
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-top:20px;">
+        <h3>temari específic</h3>
+        <div>
+            <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
+            <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
         </div>
-        <div id="lista-especifico" class="tema-container"></div>
-
-        <h3>configuració:</h3>
-        <select id="tiempo-test">
-            <option value="30">30 minuts</option>
-            <option value="60">60 minuts</option>
-            <option value="90">90 minuts</option>
-        </select>
-        <select id="num-preguntas">
-            <option value="10">10 preguntes</option>
-            <option value="25">25 preguntes</option>
-            <option value="50">50 preguntes</option>
-            <option value="80">80 preguntes</option>
-        </select>
-        <button onclick="prepararQuiz()" class="btn-check">comencem!</button>
     </div>
+    <div id="lista-especifico"></div>
 
- <div id="pantalla-quiz" class="card oculto">
-        <div id="timer">00:00</div>
-        <h2 id="contador" style="font-size:12px; color:#aaa; text-align:center;"></h2>
-        <div id="pregunta" style="font-size:18px; font-weight:bold; margin:20px 0; text-align:center;"></div>
-        <div id="opciones"></div>
-        <hr>
-        <button id="btn-siguiente" onclick="gestionarSiguiente()" style="background:var(--accent); color:#1a1a1a; font-weight:bold; text-align: center;">següent ➔</button>
-    </div>
-
-    <div id="pantalla-final" class="card oculto">
-        <div id="resultado"></div>
-        <button onclick="location.reload()" class="btn-check">nou test</button>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+    <h3 style="margin-top:25px;">configuració</h3>
+    <select id="tiempo-test">
+        <option value="30">30 minuts</option>
+        <option value="60">60 minuts</option>
+        <option value="90">90 minuts</option>
+    </select>
+    
+    <select id="num-preguntas">
+        <option value="10">10 preguntes</option>
+        <option value="25">25 preguntes</option>
+        <option value="50">50 preguntes</option>
+        <option value="80">80 preguntes</option>
+    </select>
+    
+    <button onclick="prepararQuiz()" class="btn-check" style="margin-top:20px;">comencem!</button>
+</div>
