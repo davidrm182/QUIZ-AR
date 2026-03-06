@@ -7,7 +7,7 @@ function validarPin() {
     if (input === PIN_CORRECTO) {
         document.getElementById('pantalla-bloqueo').classList.add('oculto');
         document.getElementById('contingut-protegit').classList.remove('oculto');
-        generarChecks(); 
+        generarChecks(); // Esto rellena las listas solo una vez al entrar
     } else {
         document.getElementById('error-pin').classList.remove('oculto');
         document.getElementById('pin-input').value = "";
