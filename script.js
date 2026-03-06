@@ -12,7 +12,7 @@ const TEMAS_GENERAL = [
 const TEMAS_ESPECIFICO = [
     { id: 'te1', nombre: '1. El Departament d\'Interior i Seguretat Pública' },
     { id: 'te2', nombre: '2. Agents Rurals com a Policia Judicial' },
-    { id: 'te5', nombre: '3. Pesca Continental' },
+    { id: 'te5', nombre: '5. Pesca Continental' },
     // Añade aquí del 5 al 21 siguiendo el mismo formato
 ];
 
