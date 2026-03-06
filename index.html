@@ -3,57 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Examen PRO</title>
+    <title>Simulador Opos Agente Rural</title>
     <style>
-        :root { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --accent: #4dabf7; }
-        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: auto; padding: 20px; background: var(--bg); color: var(--text); }
-        .card { background: var(--card); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
-        button { display: block; width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-size: 16px; transition: 0.3s; background: #3d3d3d; color: white; }
-        button:hover { background: #555; }
-        .btn-check { background: #4CAF50 !important; font-weight: bold; }
+        :root { 
+            --bg: #1a3c1a; /* Verde bosque fuerte y muy oscuro */
+            --card: #2d2419; /* Marrón tierra oscuro */
+            --text: #e8e8e8; 
+            --accent: #ffcc00; /* Amarillo visibilidad para el reloj */
+            --correct-full: #2e7d32; /* Verde acierto rotundo */
+            --wrong-full: #c62828; /* Rojo fallo rotundo */
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: var(--bg); color: var(--text); }
+        h1, h2, h3 { text-align: center; }
+        .card { background: var(--card); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); border: 2px solid #5d4037; }
+        button { display: block; width: 100%; padding: 16px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-size: 16px; font-weight: 500; transition: 0.2s; background: #5d4037; color: white; text-align: left; }
+        button:hover { background: #795548; }
+        .btn-check { background: #ff9800 !important; color: #1a1a1a !important; font-weight: bold; text-align: center !important; font-size: 18px; }
+        .btn-check:hover { background: #ffb74d !important; }
         .oculto { display: none; }
-        label { display: block; padding: 12px; background: #3d3d3d; margin: 8px 0; border-radius: 8px; cursor: pointer; border: 1px solid #555; }
-        input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); }
-        #timer { font-size: 24px; font-weight: bold; color: #ffcc00; text-align: center; margin-bottom: 10px; }
-        hr { border: 0; border-top: 1px solid #444; margin: 20px 0; }
+        label { display: block; padding: 15px; background: #3e3123; margin: 8px 0; border-radius: 8px; cursor: pointer; border: 1px solid #5d4037; }
+        input[type="checkbox"] { margin-right: 12px; transform: scale(1.3); }
+        select { width: 100%; padding: 12px; border-radius: 8px; background: #3e3123; color: white; border: 1px solid #5d4037; }
+        #timer { font-size: 30px; font-weight: bold; color: var(--accent); text-align: center; margin-bottom: 15px; font-family: monospace; }
+        hr { border: 0; border-top: 1px solid #5d4037; margin: 25px 0; }
+        #opciones button { text-align: left; } /* Forzar alineación texto opciones */
     </style>
 </head>
 <body>
     <div id="pantalla-inicio" class="card">
-        <h1 style="color: var(--accent); text-align:center;">Configurar Examen</h1>
+        <h1 style="color: #ff9800; text-shadow: 1px 1px 2px black;">Opos Agente Rural</h1>
+        <hr>
         <h3>📂 Selecciona Temas:</h3>
-        <label><input type="checkbox" class="tema-check" value="tema1"> Tema 1</label>
-        <label><input type="checkbox" class="tema-check" value="tema2"> Tema 2</label>
+        <label><input type="checkbox" class="tema-check" value="tema1"> Tema 1: Legislación</label>
+        <label><input type="checkbox" class="tema-check" value="tema2"> Tema 2: Medio Ambiente</label>
         
         <h3>⏱️ Límite de Tiempo:</h3>
-        <select id="tiempo-test" style="width:100%; padding:10px; border-radius:8px; background:#3d3d3d; color:white;">
-            <option value="5">5 Minutos</option>
+        <select id="tiempo-test">
             <option value="15">15 Minutos</option>
             <option value="30">30 Minutos</option>
             <option value="60">60 Minutos</option>
+            <option value="90">90 Minutos</option>
         </select>
 
-        <h3>❓ Preguntas:</h3>
-        <select id="num-preguntas" style="width:100%; padding:10px; border-radius:8px; background:#3d3d3d; color:white;">
+        <h3>❓ Número de Preguntas:</h3>
+        <select id="num-preguntas">
             <option value="10">10 preguntas</option>
             <option value="25">25 preguntas</option>
             <option value="50">50 preguntas</option>
+            <option value="80">80 preguntas (Estándar)</option>
         </select>
-        <button onclick="prepararQuiz()" class="btn-check" style="margin-top:30px;">¡INICIAR SIMULACRO!</button>
+        <button onclick="prepararQuiz()" class="btn-check" style="margin-top:35px;">¡INICIAR SIMULACRO!</button>
     </div>
 
     <div id="pantalla-quiz" class="card oculto">
         <div id="timer">00:00</div>
-        <h2 id="contador" style="font-size:14px; color:#888;"></h2>
-        <div id="pregunta" style="font-size:20px; margin-bottom:20px;"></div>
+        <h2 id="contador" style="font-size:14px; color:#aaa; font-weight:normal;"></h2>
+        <div id="pregunta" style="font-size:20px; font-weight:bold; margin-bottom:25px; line-height: 1.4;"></div>
         <div id="opciones"></div>
-        <button id="btn-blanco" onclick="dejarEnBlanco()" style="background:#555; color:#bbb;">Omitir (En Blanco)</button>
-        <button id="btn-siguiente" class="oculto" onclick="siguiente()" style="background:var(--accent); color:white;">Siguiente ➔</button>
+        <hr>
+        <button id="btn-blanco" onclick="dejarEnBlanco()" style="background:#8d6e63; color:white; text-align: center;">Omitir (En Blanco)</button>
+        <button id="btn-siguiente" class="oculto" onclick="siguiente()" style="background:var(--accent); color:#1a1a1a; text-align: center; font-weight:bold;">Siguiente Pregunta ➔</button>
     </div>
 
     <div id="pantalla-final" class="card oculto">
         <div id="resultado"></div>
-        <button onclick="location.reload()" class="btn-check">Nuevo Intento</button>
+        <button onclick="location.reload()" class="btn-check">Nuevo Simulacro</button>
     </div>
 
     <script src="script.js"></script>
