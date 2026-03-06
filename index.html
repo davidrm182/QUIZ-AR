@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Opos Agente Rural</title>
+    <title>Opos Agent Rural</title>
     <style>
         :root { 
             --bg: #1a3c1a; /* Verde bosque fuerte y muy oscuro */
@@ -31,13 +31,13 @@
 </head>
 <body>
     <div id="pantalla-inicio" class="card">
-        <h1 style="color: #ff9800; text-shadow: 1px 1px 2px black;">Opos Agente Rural</h1>
+        <h1 style="color: #ff9800; text-shadow: 1px 1px 2px black;">Opos Agent Rural</h1>
         <hr>
         <h3>📂 Selecciona Temas:</h3>
         <label><input type="checkbox" class="tema-check" value="tema1"> Tema 1: El Departamen d'Interior i Seguretat Pública:</label>
         <label><input type="checkbox" class="tema-check" value="tema2"> Tema 2: Els Agents Rurals com a Policia Judicial</label>
         
-        <h3>⏱️ Límite de Tiempo:</h3>
+        <h3>⏱️ Temps:</h3>
         <select id="tiempo-test">
             <option value="15">15 Minutos</option>
             <option value="30">30 Minutos</option>
@@ -45,7 +45,7 @@
             <option value="90">90 Minutos</option>
         </select>
 
-        <h3>❓ Número de Preguntas:</h3>
+        <h3>❓ Nombre de Preguntes:</h3>
         <select id="num-preguntas">
             <option value="10">10 preguntas</option>
             <option value="25">25 preguntas</option>
@@ -62,12 +62,12 @@
         <div id="opciones"></div>
         <hr>
         <button id="btn-blanco" onclick="dejarEnBlanco()" style="background:#8d6e63; color:white; text-align: center;">Omitir (En Blanco)</button>
-        <button id="btn-siguiente" class="oculto" onclick="siguiente()" style="background:var(--accent); color:#1a1a1a; text-align: center; font-weight:bold;">Siguiente Pregunta ➔</button>
+        <button id="btn-siguiente" class="oculto" onclick="siguiente()" style="background:var(--accent); color:#1a1a1a; text-align: center; font-weight:bold;">Next ➔</button>
     </div>
 
     <div id="pantalla-final" class="card oculto">
         <div id="resultado"></div>
-        <button onclick="location.reload()" class="btn-check">Nuevo Simulacro</button>
+        <button onclick="location.reload()" class="btn-check">Nou Test</button>
     </div>
 
     <script src="script.js"></script>
