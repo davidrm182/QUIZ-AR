@@ -1,5 +1,18 @@
 const SHEET_ID = '16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8';
+const PIN_CORRECTO = "1989"; // CAMBIA TU PIN AQUÍ
 
+// Función para desbloquear
+function validarPin() {
+    const input = document.getElementById('pin-input').value;
+    if (input === PIN_CORRECTO) {
+        document.getElementById('pantalla-bloqueo').classList.add('oculto');
+        document.getElementById('contingut-protegit').classList.remove('oculto');
+        generarChecks(); 
+    } else {
+        document.getElementById('error-pin').classList.remove('oculto');
+        document.getElementById('pin-input').value = "";
+    }
+}
 // --- CONFIGURACIÓN DE TEMAS ---
 // El "id" debe ser el nombre de la pestaña en Excel.
 const TEMAS_GENERAL = [
