@@ -64,13 +64,13 @@
         <button onclick="prepararQuiz()" class="btn-check">comencem!</button>
     </div>
 
-    <div id="pantalla-quiz" class="card oculto">
+ <div id="pantalla-quiz" class="card oculto">
         <div id="timer">00:00</div>
         <h2 id="contador" style="font-size:12px; color:#aaa; text-align:center;"></h2>
         <div id="pregunta" style="font-size:18px; font-weight:bold; margin:20px 0; text-align:center;"></div>
         <div id="opciones"></div>
-        <button id="btn-blanco" onclick="dejarEnBlanco()" style="background:#8d6e63;">en blanc (no resta)</button>
-        <button id="btn-siguiente" class="oculto" onclick="siguiente()" style="background:var(--accent); color:#1a1a1a; font-weight:bold;">següent ➔</button>
+        <hr>
+        <button id="btn-siguiente" onclick="gestionarSiguiente()" style="background:var(--accent); color:#1a1a1a; font-weight:bold; text-align: center;">següent ➔</button>
     </div>
 
     <div id="pantalla-final" class="card oculto">
