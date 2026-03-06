@@ -13,27 +13,46 @@ function validarPin() {
         document.getElementById('pin-input').value = "";
     }
 }
-// --- CONFIGURACIÓN DE TEMAS ---
-// El "id" debe ser el nombre de la pestaña en Excel.
+// --- CONFIGURACIÓ DE TEMES COMPLETA ---
 const TEMAS_GENERAL = [
-    { id: 'tg1', nombre: '1. Constitució i Estatut d\'Autonomia' },
-    { id: 'tg2', nombre: '2. Organització de l\'Administració catalana' },
-    { id: 'tg3', nombre: '3. El procediment administratiu' },
-    { id: 'tg4', nombre: '4. Funcio Pública' }
+    { id: 'tema1', nombre: '1. constitució i estatut d\'autonomia' },
+    { id: 'tema2', nombre: '2. organització de l\'administració catalana' },
+    { id: 'tema3', nombre: '3. el procediment administratiu' },
+    { id: 'tema4', nombre: '4. el personal al servei de les administracions públiques' }
 ];
 
 const TEMAS_ESPECIFICO = [
-    { id: 'te1', nombre: '1. El Departament d\'Interior i Seguretat Pública' },
-    { id: 'te2', nombre: '2. Agents Rurals com a Policia Judicial' },
-    { id: 'te5', nombre: '5. Pesca Continental' },
-    // Añade aquí del 5 al 21 siguiendo el mismo formato
+    { id: 'tema5', nombre: '1. el departament d\'interior' },
+    { id: 'tema6', nombre: '2. els agents rurals com a policia judicial' },
+    { id: 'tema7', nombre: '3. l\'activitat cinegètica a catalunya' },
+    { id: 'tema8', nombre: '4. el reglament d\'armes' },
+    { id: 'tema9', nombre: '5. l\'activitat piscícola a catalunya' },
+    { id: 'tema10', nombre: '6. protecció d\'animals' },
+    { id: 'tema11', nombre: '7. protecció de la fauna salvatge' },
+    { id: 'tema12', nombre: '8. espècies exòtiques invasores' },
+    { id: 'tema13', nombre: '9. prevenció d\'incendis forestals' },
+    { id: 'tema14', nombre: '10. regulació d\'infraestructures i activitats' },
+    { id: 'tema15', nombre: '11. protecció i gestió de les forests' },
+    { id: 'tema16', nombre: '12. normativa bàsica de la flora protegida' },
+    { id: 'tema17', nombre: '13. conservació del patrimoni natural i biodiversitat' },
+    { id: 'tema18', nombre: '14. protecció d\'espais naturals terrestres i marítims' },
+    { id: 'tema19', nombre: '15. regulació de l\'ús recreatiu dels espais naturals' },
+    { id: 'tema20', nombre: '16. protecció del patrimoni cultural en el medi natural' },
+    { id: 'tema21', nombre: '17. legislació en matèria d\'aigües a catalunya' },
+    { id: 'tema22', nombre: '18. gestió de residus' },
+    { id: 'tema23', nombre: '19. les activitats extractives' },
+    { id: 'tema24', nombre: '20. els plans de protecció civil a catalunya' },
+    { id: 'tema25', nombre: '21. geografia física i política de catalunya' }
 ];
 
-// --- GENERADOR D'INTERFAZ ---
+// --- GENERADOR D'INTERFAZ (SENSE DUPLICATS) ---
 function generarChecks() {
     const genDiv = document.getElementById('lista-general');
     const espDiv = document.getElementById('lista-especifico');
-    if(!genDiv || !espDiv) return;
+    
+    // NETEJEM primer per evitar duplicats si es clica entrar dues vegades
+    genDiv.innerHTML = "";
+    espDiv.innerHTML = "";
     
     TEMAS_GENERAL.forEach(t => {
         genDiv.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>`;
@@ -43,7 +62,6 @@ function generarChecks() {
         espDiv.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}"> ${t.nombre}</label>`;
     });
 }
-generarChecks();
 
 function seleccionar(estado, clase) {
     document.querySelectorAll('.' + clase).forEach(cb => cb.checked = estado);
