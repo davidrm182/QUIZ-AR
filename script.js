@@ -13,44 +13,44 @@ function validarPin() {
         document.getElementById('pin-input').value = "";
     }
 }
-// --- CONFIGURACIÓ DE TEMES COMPLETA ---
+// --- CONFIGURACIÓ DE TEMES COMPLETA (Segons la teva imatge) ---
 const TEMAS_GENERAL = [
-    { id: 'tg1', nombre: '1. constitució i estatut d\'autonomia' },
-    { id: 'tg2', nombre: '2. organització de l\'administració catalana' },
-    { id: 'tg3', nombre: '3. el procediment administratiu' },
-    { id: 'tg4', nombre: '4. el personal al servei de les administracions públiques' }
+    { id: 'tg1', nombre: '1. Constitució i Estatut d\'Autonomia' },
+    { id: 'tg2', nombre: '2. Organització de l\'Administració catalana' },
+    { id: 'tg3', nombre: '3. El procediment administratiu' },
+    { id: 'tg4', nombre: '4. El personal al servei de les adminitracions públiques' }
 ];
 
 const TEMAS_ESPECIFICO = [
-    { id: 'te1', nombre: '1. el departament d\'interior' },
-    { id: 'te2', nombre: '2. els agents rurals com a policia judicial' },
-    { id: 'te3', nombre: '3. l\'activitat cinegètica a catalunya' },
-    { id: 'te4', nombre: '4. el reglament d\'armes' },
-    { id: 'te5', nombre: '5. l\'activitat piscícola a catalunya' },
-    { id: 'te6', nombre: '6. protecció d\'animals' },
-    { id: 'te7', nombre: '7. protecció de la fauna salvatge' },
-    { id: 'te8', nombre: '8. espècies exòtiques invasores' },
-    { id: 'te9', nombre: '9. prevenció d\'incendis forestals' },
-    { id: 'te10', nombre: '10. regulació d\'infraestructures i activitats' },
-    { id: 'te11', nombre: '11. protecció i gestió de les forests' },
-    { id: 'te12', nombre: '12. normativa bàsica de la flora protegida' },
-    { id: 'te13', nombre: '13. conservació del patrimoni natural i biodiversitat' },
-    { id: 'te14', nombre: '14. protecció d\'espais naturals terrestres i marítims' },
-    { id: 'te15', nombre: '15. regulació de l\'ús recreatiu dels espais naturals' },
-    { id: 'te16', nombre: '16. protecció del patrimoni cultural en el medi natural' },
-    { id: 'te17', nombre: '17. legislació en matèria d\'aigües a catalunya' },
-    { id: 'te18', nombre: '18. gestió de residus' },
-    { id: 'te19', nombre: '19. les activitats extractives' },
-    { id: 'te20', nombre: '20. els plans de protecció civil a catalunya' },
-    { id: 'te21', nombre: '21. geografia física i política de catalunya' }
+    { id: 'te1', nombre: '1. El Departament d\'Interior' },
+    { id: 'te2', nombre: '2. Els Agents Rurals com a policia judicial' },
+    { id: 'te3', nombre: '3. L\'activitat cinegètica a Catalunya' },
+    { id: 'te4', nombre: '4. El Reglament d\'armes' },
+    { id: 'te5', nombre: '5. L\'activitat piscícola a Catalunya' },
+    { id: 'te6', nombre: '6. Protecció d\'animals' },
+    { id: 'te7', nombre: '7. Protecció de la fauna salvatge' },
+    { id: 'te8', nombre: '8. Espècies exòtiques invasores' },
+    { id: 'te9', nombre: '9. Prevenció d\'incendis forestals' },
+    { id: 'te10', nombre: '10. Regulació d\'infraestructures i activitats' },
+    { id: 'te11', nombre: '11. Protecció i gestió de les forests' },
+    { id: 'te12', nombre: '12. Normativa bàsica de la flora protegida' },
+    { id: 'te13', nombre: '13. Conservació del patrimoni natural i de la biodiversitat' },
+    { id: 'te14', nombre: '14. Protecció dels espais naturals terrestres i marítims' },
+    { id: 'te15', nombre: '15. Regulació de l\'ús recreatiu dels espais naturals' },
+    { id: 'te16', nombre: '16. Protecció del patrimoni cultural en el medi natural' },
+    { id: 'te17', nombre: '17. Legislació en matèria d\'aigües a Catalunya' },
+    { id: 'te18', nombre: '18. Gestió de residus' },
+    { id: 'te19', nombre: '19. Les activitats extractives' },
+    { id: 'te20', nombre: '20. Els plans de protecció civil a Catalunya' },
+    { id: 'te21', nombre: '21. Geografia física i política de Catalunya' }
 ];
 
-// --- GENERADOR D'INTERFAZ (SENSE DUPLICATS) ---
+// --- GENERADOR D'INTERFAZ (NETEJA ABANS DE DIBUIXAR) ---
 function generarChecks() {
     const genDiv = document.getElementById('lista-general');
     const espDiv = document.getElementById('lista-especifico');
     
-    // NETEJEM primer per evitar duplicats si es clica entrar dues vegades
+    // IMPORTANT: Netejem el contingut actual per evitar duplicats
     genDiv.innerHTML = "";
     espDiv.innerHTML = "";
     
