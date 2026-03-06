@@ -7,9 +7,9 @@ async function prepararQuiz() {
     const cantidad = parseInt(document.getElementById('num-preguntas').value);
     const minutos = parseInt(document.getElementById('tiempo-test').value);
     
-    if (checks.length === 0) return alert("Selecciona temas");
+    if (checks.length === 0) return alert("Por favor, selecciona al menos un tema.");
 
-    document.getElementById('pantalla-inicio').innerHTML = "<h2>Generando examen...</h2>";
+    document.getElementById('pantalla-inicio').innerHTML = "<h2>Generando simulacro forestal...</h2>";
     
     for (let check of checks) {
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${check.value}`;
@@ -29,7 +29,6 @@ async function prepararQuiz() {
     preguntasTotales.sort(() => Math.random() - 0.5);
     preguntasTotales = preguntasTotales.slice(0, cantidad);
 
-    // Configurar Tiempo
     tiempoRestante = minutos * 60;
     iniciarCronometro();
 
@@ -66,17 +65,31 @@ function mostrarPregunta() {
 function verificar(resp, boton) {
     let correcta = preguntasTotales[indicePregunta].correcta;
     let botones = document.getElementById('opciones').getElementsByTagName('button');
-    clearInterval(intervalo); // Pausa el tiempo mientras ves la solución si quieres, o quítalo para que siga
-    iniciarCronometro(); // Reactiva
-    for (let b of botones) b.disabled = true;
+    clearInterval(intervalo); 
+    
+    for (let b of botones) {
+        b.disabled = true;
+        // SOLUCIÓN AL PROBLEMA: Buscar la correcta y ponerla VERDE ENTERA
+        if (b.innerText.toLowerCase().trim().startsWith(correcta)) {
+            b.style.background = "#2e7d32"; // Verde fuerte completo
+            b.style.color = "white";
+            b.style.fontWeight = "bold";
+            if (resp !== correcta) b.innerText = "✅ " + b.innerText; // Añadir check visual
+        }
+    }
+
     document.getElementById('btn-blanco').classList.add('oculto');
+
     if (resp === correcta) {
-        boton.style.background = "#2e7d32"; aciertos++;
+        aciertos++;
     } else {
-        boton.style.background = "#c62828"; fallos++;
-        for (let b of botones) if (b.innerText.toLowerCase().startsWith(correcta)) b.style.border = "2px solid #4CAF50";
+        boton.style.background = "#c62828"; // Rojo fuerte completo para tu fallo
+        boton.style.color = "white";
+        boton.innerText = "❌ " + boton.innerText; // Añadir aspa visual
+        fallos++;
     }
     document.getElementById('btn-siguiente').classList.remove('oculto');
+    iniciarCronometro();
 }
 
 function dejarEnBlanco() { blancos++; indicePregunta++; mostrarPregunta(); }
@@ -88,11 +101,13 @@ function mostrarFinal() {
     document.getElementById('pantalla-final').classList.remove('oculto');
     let nota = aciertos - (fallos * 0.25);
     document.getElementById('resultado').innerHTML = `
-        <h1 style="color:var(--accent)">Examen Finalizado</h1>
-        <p style="font-size:20px">Nota Neta: <strong>${nota.toFixed(2)}</strong></p>
+        <h1 style="color:#ff9800">Simulacro Finalizado</h1>
+        <p style="font-size:24px; text-align:center;">Nota Neta: <strong>${nota.toFixed(2)}</strong></p>
         <hr>
-        <p>✅ Enciertos: ${aciertos}</p>
-        <p>❌ Errades: ${fallos}</p>
-        <p>⚪ En blanc: ${blancos}</p>
+        <div style="font-size:18px; line-height:2;">
+            <p>✅ Encrtos: <strong style="color:#4CAF50">${aciertos}</strong></p>
+            <p>❌ Errades: <strong style="color:#f44336">${fallos}</strong> (-${(fallos*0.25).toFixed(2)})</p>
+            <p>⚪ En blanc: <strong>${blancos}</strong></p>
+        </div>
     `;
 }
