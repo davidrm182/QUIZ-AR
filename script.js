@@ -16,10 +16,11 @@ const TEMAS_ESPECIFICO = [
     // Añade aquí del 5 al 21 siguiendo el mismo formato
 ];
 
-// --- GENERADOR DE INTERFAZ ---
+// --- GENERADOR D'INTERFAZ ---
 function generarChecks() {
     const genDiv = document.getElementById('lista-general');
     const espDiv = document.getElementById('lista-especifico');
+    if(!genDiv || !espDiv) return;
     
     TEMAS_GENERAL.forEach(t => {
         genDiv.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>`;
@@ -35,16 +36,17 @@ function seleccionar(estado, clase) {
     document.querySelectorAll('.' + clase).forEach(cb => cb.checked = estado);
 }
 
-// --- LÓGICA DEL TEST ---
+// --- LÒGICA DEL TEST ---
 let preguntasTotales = [], indicePregunta = 0, aciertos = 0, fallos = 0, blancos = 0;
 let tiempoRestante, intervalo;
+let respondida = false; // Control per saber si l'usuari ha clicat una opció
 
 async function prepararQuiz() {
     const checks = document.querySelectorAll('.tema-check:checked');
     const cantidad = parseInt(document.getElementById('num-preguntas').value);
     const minutos = parseInt(document.getElementById('tiempo-test').value);
     
-    if (checks.length === 0) return alert("selecciona temes primero");
+    if (checks.length === 0) return alert("selecciona temes primer");
 
     document.getElementById('pantalla-inicio').innerHTML = "<h2>carregant preguntes...</h2>";
     
@@ -84,11 +86,12 @@ function iniciarCronometro() {
 
 function mostrarPregunta() {
     if (indicePregunta >= preguntasTotales.length) { clearInterval(intervalo); mostrarFinal(); return; }
-    document.getElementById('btn-siguiente').classList.add('oculto');
-    document.getElementById('btn-blanco').classList.remove('oculto');
+    
+    respondida = false; 
     let p = preguntasTotales[indicePregunta];
     document.getElementById('contador').innerText = `pregunta ${indicePregunta + 1} de ${preguntasTotales.length}`;
     document.getElementById('pregunta').innerText = p.pregunta;
+    
     document.getElementById('opciones').innerHTML = `
         <button onclick="verificar('a', this)">${p.a}</button>
         <button onclick="verificar('b', this)">${p.b}</button>
@@ -98,43 +101,58 @@ function mostrarPregunta() {
 }
 
 function verificar(resp, boton) {
+    if(respondida) return; 
+    
     let correcta = preguntasTotales[indicePregunta].correcta;
     let botones = document.getElementById('opciones').getElementsByTagName('button');
     const mapeo = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
+    
+    respondida = true;
     clearInterval(intervalo); 
+    
     for (let b of botones) b.disabled = true;
     
-    if(botones[mapeo[correcta]]) {
-        botones[mapeo[correcta]].style.background = "#2e7d32";
-        botones[mapeo[correcta]].innerText = "✅ " + botones[mapeo[correcta]].innerText;
+    let indexCorrecta = mapeo[correcta];
+    if(botones[indexCorrecta]) {
+        botones[indexCorrecta].style.background = "#2e7d32";
+        botones[indexCorrecta].style.fontWeight = "bold";
+        botones[indexCorrecta].innerText = "✅ " + botones[indexCorrecta].innerText;
     }
 
     if (resp === correcta) {
         aciertos++;
     } else {
         boton.style.background = "#c62828";
+        boton.style.fontWeight = "bold";
         boton.innerText = "❌ " + boton.innerText;
         fallos++;
     }
-    document.getElementById('btn-blanco').classList.add('oculto');
-    document.getElementById('btn-siguiente').classList.remove('oculto');
     iniciarCronometro();
 }
 
-function dejarEnBlanco() { blancos++; indicePregunta++; mostrarPregunta(); }
-function siguiente() { indicePregunta++; mostrarPregunta(); }
+function gestionarSiguiente() {
+    if (!respondida) {
+        blancos++; 
+    }
+    indicePregunta++;
+    mostrarPregunta();
+}
 
 function mostrarFinal() {
     clearInterval(intervalo);
     document.getElementById('pantalla-quiz').classList.add('oculto');
     document.getElementById('pantalla-final').classList.remove('oculto');
     let nota = aciertos - (fallos * 0.25);
+    if (nota < 0) nota = 0;
+    
     document.getElementById('resultado').innerHTML = `
         <h1 style="color:#ff9800">simulacre finalitzat</h1>
-        <p style="font-size:24px; text-align:center;">nota: <strong>${nota.toFixed(2)}</strong></p>
+        <p style="font-size:24px; text-align:center;">nota neta: <strong>${nota.toFixed(2)}</strong></p>
         <hr>
-        <p>encerts: <strong style="color:#4CAF50">${aciertos}</strong></p>
-        <p>errades: <strong style="color:#f44336">${fallos}</strong></p>
-        <p>en blanc: <strong>${blancos}</strong></p>
+        <div style="font-size:18px; line-height:2;">
+            <p>✅ encerts: <strong style="color:#4CAF50">${aciertos}</strong></p>
+            <p>❌ errades: <strong style="color:#f44336">${fallos}</strong></p>
+            <p>⚪ en blanc: <strong>${blancos}</strong></p>
+        </div>
     `;
 }
