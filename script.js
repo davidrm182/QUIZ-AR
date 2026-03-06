@@ -9,7 +9,7 @@ async function prepararQuiz() {
     
     if (checks.length === 0) return alert("Por favor, selecciona al menos un tema.");
 
-    document.getElementById('pantalla-inicio').innerHTML = "<h2>Generando simulacro forestal...</h2>";
+    document.getElementById('pantalla-inicio').innerHTML = "<h2>Generant test...</h2>";
     
     for (let check of checks) {
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${check.value}`;
@@ -105,7 +105,7 @@ function mostrarFinal() {
         <p style="font-size:24px; text-align:center;">Nota Neta: <strong>${nota.toFixed(2)}</strong></p>
         <hr>
         <div style="font-size:18px; line-height:2;">
-            <p>✅ Encrtos: <strong style="color:#4CAF50">${aciertos}</strong></p>
+            <p>✅ Encerts: <strong style="color:#4CAF50">${aciertos}</strong></p>
             <p>❌ Errades: <strong style="color:#f44336">${fallos}</strong> (-${(fallos*0.25).toFixed(2)})</p>
             <p>⚪ En blanc: <strong>${blancos}</strong></p>
         </div>
