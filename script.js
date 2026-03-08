@@ -9,36 +9,35 @@ let respondida = false;
 
 // Map de nombres completos
 const TEMAS_GENERAL = [
-{id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
-{id:"tg2",nombre:"2. Organització Administració catalana"},
-{id:"tg3",nombre:"3. Procediment administratiu"},
-{id:"tg4",nombre:"4. Personal administracions públiques"}
+    {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
+    {id:"tg2",nombre:"2. Organització Administració catalana"},
+    {id:"tg3",nombre:"3. Procediment administratiu"},
+    {id:"tg4",nombre:"4. Personal administracions públiques"}
 ];
 const TEMAS_ESPECIFICO = [
-{id:"te1",nombre:"1. Departament d'Interior"},
-{id:"te2",nombre:"2. Agents Rurals policia judicial"},
-{id:"te3",nombre:"3. Activitat cinegètica"},
-{id:"te4",nombre:"4. Reglament d'armes"},
-{id:"te5",nombre:"5. Activitat piscícola"},
-{id:"te6",nombre:"6. Protecció animals"},
-{id:"te7",nombre:"7. Protecció fauna"},
-{id:"te8",nombre:"8. Espècies invasores"},
-{id:"te9",nombre:"9. Incendis forestals"},
-{id:"te10",nombre:"10. Infraestructures medi natural"},
-{id:"te11",nombre:"11. Gestió forestal"},
-{id:"te12",nombre:"12. Flora protegida"},
-{id:"te13",nombre:"13. Biodiversitat"},
-{id:"te14",nombre:"14. Espais naturals"},
-{id:"te15",nombre:"15. Ús recreatiu"},
-{id:"te16",nombre:"16. Patrimoni cultural"},
-{id:"te17",nombre:"17. Aigües"},
-{id:"te18",nombre:"18. Residus"},
-{id:"te19",nombre:"19. Activitats extractives"},
-{id:"te20",nombre:"20. Protecció civil"},
-{id:"te21",nombre:"21. Geografia Catalunya"}
+    {id:"te1",nombre:"1. Departament d'Interior"},
+    {id:"te2",nombre:"2. Agents Rurals policia judicial"},
+    {id:"te3",nombre:"3. Activitat cinegètica"},
+    {id:"te4",nombre:"4. Reglament d'armes"},
+    {id:"te5",nombre:"5. Activitat piscícola"},
+    {id:"te6",nombre:"6. Protecció animals"},
+    {id:"te7",nombre:"7. Protecció fauna"},
+    {id:"te8",nombre:"8. Espècies invasores"},
+    {id:"te9",nombre:"9. Incendis forestals"},
+    {id:"te10",nombre:"10. Infraestructures medi natural"},
+    {id:"te11",nombre:"11. Gestió forestal"},
+    {id:"te12",nombre:"12. Flora protegida"},
+    {id:"te13",nombre:"13. Biodiversitat"},
+    {id:"te14",nombre:"14. Espais naturals"},
+    {id:"te15",nombre:"15. Ús recreatiu"},
+    {id:"te16",nombre:"16. Patrimoni cultural"},
+    {id:"te17",nombre:"17. Aigües"},
+    {id:"te18",nombre:"18. Residus"},
+    {id:"te19",nombre:"19. Activitats extractives"},
+    {id:"te20",nombre:"20. Protecció civil"},
+    {id:"te21",nombre:"21. Geografia Catalunya"}
 ];
 
-// Obtener nombre completo por id
 function getNombreTema(id){
     const g = TEMAS_GENERAL.find(t=>t.id===id);
     if(g) return g.nombre;
@@ -47,22 +46,23 @@ function getNombreTema(id){
     return id;
 }
 
-// PIN
 function validarPin(){
     const input = document.getElementById("pin-input").value;
     const error = document.getElementById("error-pin");
     if(input === PIN_CORRECTO){
         document.getElementById("pantalla-bloqueo").classList.add("oculto");
         document.getElementById("contingut-protegit").classList.remove("oculto");
+        generarChecks();
     }else{
         error.classList.remove("oculto");
     }
 }
 
-// Generar checks
 function generarChecks(){
     const gen = document.getElementById("lista-general");
     const esp = document.getElementById("lista-especifico");
+    if(!gen || !esp) return;
+    gen.innerHTML = ""; esp.innerHTML = "";
     TEMAS_GENERAL.forEach(t=>{
         gen.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}">${t.nombre}</label>`;
     });
@@ -71,12 +71,10 @@ function generarChecks(){
     });
 }
 
-// Seleccionar todos o ninguno
 function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-// Cargar preguntas de Google Sheet
 async function cargarPreguntas(tema){
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${tema}`;
     const res = await fetch(url);
@@ -86,49 +84,45 @@ async function cargarPreguntas(tema){
     const rows = json.table.rows;
     let lista = [];
     rows.forEach(r=>{
-        if(!r.c[0]) return;
+        if(!r.c || !r.c[0]) return;
         lista.push({
-            tema: getNombreTema(tema), // Nombre completo
+            tema: getNombreTema(tema),
             pregunta: r.c[0]?.v || "",
             a: r.c[1]?.v || "",
             b: r.c[2]?.v || "",
             c: r.c[3]?.v || "",
             d: r.c[4]?.v || "",
-            correcta: (r.c[5]?.v || "").toLowerCase(),
+            correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
             extra: r.c[6]?.v || ""
         });
     });
     return lista;
 }
 
-// Preparar quiz
 async function prepararQuiz(){
     const temasSeleccionados=[...document.querySelectorAll(".tema-check:checked")].map(t=>t.value);
     if(temasSeleccionados.length===0){ alert("Selecciona almenys un tema"); return; }
-    preguntas=[];
-    indice=0;
-    aciertos=0;
-    fallos=0;
-    respondida=false;
+    
+    preguntas=[]; indice=0; aciertos=0; fallos=0; respondida=false;
+    
+    document.getElementById("pantalla-inicio").innerHTML = "<h2>Carregant preguntes...</h2>";
 
     for(let tema of temasSeleccionados){
         try{
             const p = await cargarPreguntas(tema);
             preguntas = preguntas.concat(p);
-        }catch(e){
-            console.error("Error cargando:",tema);
-        }
+        }catch(e){ console.error("Error cargando:",tema); }
     }
-    if(preguntas.length===0){ alert("No s'han pogut carregar preguntes."); return; }
+
     mezclar(preguntas);
     const cantidad=parseInt(document.getElementById("num-preguntas").value);
     preguntas=preguntas.slice(0,cantidad);
+    
     document.getElementById("pantalla-inicio").classList.add("oculto");
     document.getElementById("pantalla-quiz").classList.remove("oculto");
     mostrarPregunta();
 }
 
-// Mezclar array
 function mezclar(array){
     for(let i=array.length-1;i>0;i--){
         const j=Math.floor(Math.random()*(i+1));
@@ -136,105 +130,97 @@ function mezclar(array){
     }
 }
 
-// Mostrar pregunta
 function mostrarPregunta(){
     const q = preguntas[indice];
-    respondida=false;
-
-    // MARCADOR + TEMA ARRIBA
+    respondida = false;
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
+    
     document.getElementById("pregunta").innerHTML = `
-        <div style="margin-bottom:5px;font-size:14px;color:#ffcc00;">Tema: ${q.tema}</div>
-        <div style="margin-bottom:10px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>
-        ${q.pregunta}
+        <div style="font-size:13px; color:#ffcc00; margin-bottom:5px;">${q.tema}</div>
+        <div style="font-size:14px; margin-bottom:15px;">Pregs: ${indice + 1}/${preguntas.length} | Nota: ${nota}</div>
+        <div style="text-align:center;">${q.pregunta}</div>
     `;
 
-    // SHUFFLE RESPUESTAS
     let opciones = [
-        {letra:"a", texto:q.a},
-        {letra:"b", texto:q.b},
-        {letra:"c", texto:q.c},
-        {letra:"d", texto:q.d}
+        {letra:"a", texto:q.a}, {letra:"b", texto:q.b},
+        {letra:"c", texto:q.c}, {letra:"d", texto:q.d}
     ];
     mezclar(opciones);
 
     let html = "";
     opciones.forEach(o=>{
-        html += `<button id="btn-${o.letra}" onclick="responder('${o.letra}')" style="margin:4px;width:48%;padding:12px;font-size:16px;">${o.texto}</button>`;
+        // Botones en bloque (uno debajo de otro)
+        html += `<button id="btn-${o.letra}" onclick="responder('${o.letra}')" 
+                 style="width:100%; margin:5px 0; padding:15px; font-size:15px; text-align:left; background:#3e3123; color:white; border-radius:10px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
+                 <span>${o.texto}</span>
+                 <span id="icon-${o.letra}"></span>
+                 </button>`;
     });
     document.getElementById("opciones").innerHTML = html;
 
-    // BOTONES ATRÁS, EXTRA, SIGUIENTE
-    const cont = document.getElementById("contenedor-controles");
-    cont.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-top:10px;">
-            <button onclick="anterior()" style="width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">⬅️ Enrere</button>
-            <button id="btn-extra" onclick="mostrarExtra()" disabled style="width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">🔍 Extra</button>
-            <button onclick="siguiente()" style="width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">Següent ➡️</button>
+    document.getElementById("contenedor-controles").innerHTML = `
+        <div style="display:flex; justify-content:space-between; gap:10px;">
+            <button onclick="anterior()" style="flex:1; background:#5d4037;">⬅️</button>
+            <button id="btn-extra" onclick="mostrarExtra()" disabled style="flex:1; background:#5d4037;">🔍 Info</button>
+            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black;">Següent ➡️</button>
         </div>
     `;
 }
 
-// Responder
 function responder(resp){
     if(respondida) return;
-    respondida=true;
+    respondida = true;
     const q = preguntas[indice];
     const correcta = q.correcta;
-    if(resp===correcta){ 
+    
+    // Colorear e insertar iconos
+    if(resp === correcta){ 
         aciertos++; 
-        document.getElementById(`btn-${resp}`).style.backgroundColor="#4CAF50";
-    }else{
+        const btn = document.getElementById(`btn-${resp}`);
+        btn.style.backgroundColor = "#2e7d32";
+        btn.style.borderColor = "#4CAF50";
+        document.getElementById(`icon-${resp}`).innerHTML = "✅";
+    } else {
         fallos++;
-        document.getElementById(`btn-${resp}`).style.backgroundColor="#f44336";
-        if(correcta) document.getElementById(`btn-${correcta}`).style.backgroundColor="#4CAF50";
+        const btnFallo = document.getElementById(`btn-${resp}`);
+        btnFallo.style.backgroundColor = "#c62828";
+        btnFallo.style.borderColor = "#f44336";
+        document.getElementById(`icon-${resp}`).innerHTML = "❌";
+        
+        // Mostrar la correcta también
+        const btnCorrecto = document.getElementById(`btn-${correcta}`);
+        btnCorrecto.style.backgroundColor = "#2e7d32";
+        document.getElementById(`icon-${correcta}`).innerHTML = "✅";
     }
-    document.getElementById("btn-extra").disabled=false;
-    actualizarMarcador();
+    document.getElementById("btn-extra").disabled = false;
 }
 
-// Mostrar extra
 function mostrarExtra(){
-    const q = preguntas[indice];
-    alert(q.extra || "Sense informació addicional");
+    alert(preguntas[indice].extra || "Sense informació addicional");
 }
 
-// Botones Atrás y Siguiente
 function anterior(){
-    if(indice>0){
-        indice--;
-        mostrarPregunta();
-    }
+    if(indice > 0) { indice--; mostrarPregunta(); }
 }
+
 function siguiente(){
-    if(!respondida){
-        alert("Has de respondre abans de passar a la següent pregunta");
-        return;
-    }
+    if(!respondida){ alert("Respon primer!"); return; }
     indice++;
-    if(indice>=preguntas.length){
-        final();
-    }else{
-        mostrarPregunta();
-    }
+    if(indice >= preguntas.length) final();
+    else mostrarPregunta();
 }
 
-// Actualizar marcador (arriba)
-function actualizarMarcador(){
-    const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
-    const preguntaDiv = document.getElementById("pregunta");
-    const textoPregunta = preguntas[indice].pregunta;
-    preguntaDiv.innerHTML = `<div style="margin-bottom:5px;font-size:14px;color:#ffcc00;">Tema: ${preguntas[indice].tema}</div>
-        <div style="margin-bottom:10px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>
-        ${textoPregunta}`;
-}
-
-// Pantalla final
 function final(){
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
-    document.getElementById("resultado").innerHTML = `Encerts: ${aciertos} / ${preguntas.length} <br> Errors: ${fallos} <br> Nota final: <strong>${nota}</strong>`;
+    document.getElementById("resultado").innerHTML = `
+        <h2 style="color:#ff9800">Test Finalitzat</h2>
+        <div style="font-size:20px; line-height:1.6;">
+            Encerts: ${aciertos}<br>
+            Errors: ${fallos}<br>
+            Nota Final: <span style="font-size:30px;">${nota}</span>
+        </div>`;
 }
 
 window.onload = generarChecks;
