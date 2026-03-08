@@ -1,13 +1,11 @@
 const SHEET_ID = '16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8';
-const PIN_CORRECTO = "1989"; // CAMBIA TU PIN AQUÍ
-
-// PEGA AQUÍ LA URL QUE HAS COPIADO EN EL PASO ANTERIOR
+const PIN_CORRECTO = "1989"; 
 const URL_LOGS = "https://script.google.com/macros/s/AKfycbwiUXCd7rafjpUsDIXTGXXCqwiNzflNCvHfagwMRthSRoKNZs2kLNISA1Cz0mYNVYIjcA/exec"; 
 
 function registrarLog(accion, pin, resultado) {
     fetch(URL_LOGS, {
         method: 'POST',
-        mode: 'no-cors', // Importante para que no de error de seguridad
+        mode: 'no-cors', 
         body: JSON.stringify({ accion: accion, pin: pin, resultado: resultado })
     });
 }
@@ -15,9 +13,8 @@ function registrarLog(accion, pin, resultado) {
 function validarPin() {
     const input = document.getElementById('pin-input').value;
     const errorMsg = document.getElementById('error-pin');
-    
     if (input === PIN_CORRECTO) {
-        registrarLog("Login", "*****", "✅ ACCÉS CORRECTE"); // No enviamos el PIN real por privacidad si quieres
+        registrarLog("Login", "*****", "✅ ACCÉS CORRECTE");
         document.getElementById('pantalla-bloqueo').classList.add('oculto');
         document.getElementById('contingut-protegit').classList.remove('oculto');
         generarChecks();
@@ -27,7 +24,7 @@ function validarPin() {
         document.getElementById('pin-input').value = "";
     }
 }
-// --- CONFIGURACIÓ DE TEMES COMPLETA (Segons la teva imatge) ---
+
 const TEMAS_GENERAL = [
     { id: 'tg1', nombre: '1. Constitució i Estatut d\'Autonomia' },
     { id: 'tg2', nombre: '2. Organització de l\'Administració catalana' },
@@ -59,22 +56,20 @@ const TEMAS_ESPECIFICO = [
     { id: 'te21', nombre: '21. Geografia física i política de Catalunya' }
 ];
 
-// --- GENERADOR D'INTERFAZ (NETEJA ABANS DE DIBUIXAR) ---
 function generarChecks() {
     const genDiv = document.getElementById('lista-general');
     const espDiv = document.getElementById('lista-especifico');
+    genDiv.innerHTML = ""; espDiv.innerHTML = "";
+    TEMAS_GENERAL.forEach(t => { genDiv.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>`; });
+    TEMAS_ESPECIFICO.forEach(t => { espDiv.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}"> ${t.nombre}</label>`; });
     
-    // IMPORTANT: Netejem el contingut actual per evitar duplicats
-    genDiv.innerHTML = "";
-    espDiv.innerHTML = "";
-    
-    TEMAS_GENERAL.forEach(t => {
-        genDiv.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>`;
-    });
-    
-    TEMAS_ESPECIFICO.forEach(t => {
-        espDiv.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}"> ${t.nombre}</label>`;
-    });
+    // Añadimos opción "Sin tiempo" al HTML dinámicamente si no existe
+    const tiempoSelect = document.getElementById('tiempo-test');
+    if (![...tiempoSelect.options].some(o => o.value === "0")) {
+        const opt = document.createElement('option');
+        opt.value = "0"; opt.innerHTML = "Sense temps"; opt.selected = true;
+        tiempoSelect.prepend(opt);
+    }
 }
 
 function seleccionar(estado, clase) {
@@ -84,7 +79,6 @@ function seleccionar(estado, clase) {
 // --- LÒGICA DEL TEST ---
 let preguntasTotales = [], indicePregunta = 0, aciertos = 0, fallos = 0, blancos = 0;
 let tiempoRestante, intervalo;
-let respondida = false; // Control per saber si l'usuari ha clicat una opció
 
 async function prepararQuiz() {
     const checks = document.querySelectorAll('.tema-check:checked');
@@ -92,7 +86,6 @@ async function prepararQuiz() {
     const minutos = parseInt(document.getElementById('tiempo-test').value);
     
     if (checks.length === 0) return alert("selecciona temes primer");
-
     document.getElementById('pantalla-inicio').innerHTML = "<h2>carregant preguntes...</h2>";
     
     for (let check of checks) {
@@ -102,9 +95,13 @@ async function prepararQuiz() {
             const texto = await res.text();
             const json = JSON.parse(texto.substring(texto.indexOf('{'), texto.lastIndexOf('}') + 1));
             const filas = json.table.rows.slice(1).map(row => ({
-                pregunta: row.c[0]?.v || '', a: row.c[1]?.v || '', b: row.c[2]?.v || '',
-                c: row.c[3]?.v || '', d: row.c[4]?.v || '',
-                correcta: row.c[5]?.v?.toString().toLowerCase().trim() || ''
+                pregunta: row.c[0]?.v || '', 
+                a: row.c[1]?.v || '', b: row.c[2]?.v || '', c: row.c[3]?.v || '', d: row.c[4]?.v || '',
+                correcta: row.c[5]?.v?.toString().toLowerCase().trim() || '',
+                extra: row.c[6]?.v || 'No hi ha informació extra disponible.',
+                estado: null, // null, 'correcte', 'incorrecte'
+                respuestaUsuario: null,
+                opcionesMezcladas: [] 
             }));
             preguntasTotales = preguntasTotales.concat(filas);
         } catch (e) { console.error("Error en tema: " + check.value); }
@@ -112,11 +109,37 @@ async function prepararQuiz() {
 
     preguntasTotales.sort(() => Math.random() - 0.5);
     preguntasTotales = preguntasTotales.slice(0, cantidad);
-    tiempoRestante = minutos * 60;
-    iniciarCronometro();
+    
+    // Mezclar opciones para cada pregunta de entrada
+    preguntasTotales.forEach(p => {
+        let opts = [
+            {id: 'a', texto: p.a}, {id: 'b', texto: p.b}, 
+            {id: 'c', texto: p.c}, {id: 'd', texto: p.d}
+        ];
+        p.opcionesMezcladas = opts.sort(() => Math.random() - 0.5);
+    });
+
+    if (minutos > 0) {
+        tiempoRestante = minutos * 60;
+        iniciarCronometro();
+    } else {
+        document.getElementById('timer').innerText = "∞";
+    }
+
     document.getElementById('pantalla-inicio').classList.add('oculto');
     document.getElementById('pantalla-quiz').classList.remove('oculto');
+    actualizarMarcador();
     mostrarPregunta();
+}
+
+function actualizarMarcador() {
+    let notaActual = aciertos - (fallos * 0.25);
+    document.getElementById('contador').innerHTML = `
+        Pregunta ${indicePregunta + 1} de ${preguntasTotales.length}<br>
+        <span style="color:#4CAF50">✅ ${aciertos}</span> | 
+        <span style="color:#f44336">❌ ${fallos}</span> | 
+        <span>Nota: <strong>${Math.max(0, notaActual).toFixed(2)}</strong></span>
+    `;
 }
 
 function iniciarCronometro() {
@@ -132,53 +155,63 @@ function iniciarCronometro() {
 function mostrarPregunta() {
     if (indicePregunta >= preguntasTotales.length) { clearInterval(intervalo); mostrarFinal(); return; }
     
-    respondida = false; 
     let p = preguntasTotales[indicePregunta];
-    document.getElementById('contador').innerText = `pregunta ${indicePregunta + 1} de ${preguntasTotales.length}`;
     document.getElementById('pregunta').innerText = p.pregunta;
+    actualizarMarcador();
     
-    document.getElementById('opciones').innerHTML = `
-        <button onclick="verificar('a', this)">${p.a}</button>
-        <button onclick="verificar('b', this)">${p.b}</button>
-        <button onclick="verificar('c', this)">${p.c}</button>
-        <button onclick="verificar('d', this)">${p.d}</button>
+    let htmlOpts = "";
+    p.opcionesMezcladas.forEach(opt => {
+        let color = "#5d4037";
+        let extraEstilo = "";
+        if (p.estado) {
+            if (opt.id === p.correcta) color = "#2e7d32";
+            else if (opt.id === p.respuestaUsuario) color = "#c62828";
+            extraEstilo = "disabled";
+        }
+        htmlOpts += `<button ${extraEstilo} onclick="verificar('${opt.id}', this)" style="background:${color}">${opt.texto}</button>`;
+    });
+    document.getElementById('opciones').innerHTML = htmlOpts;
+
+    // Botonera inferior: [Atrás] [Lupa] [Siguiente]
+    document.getElementById('btn-siguiente').parentElement.innerHTML = `
+        <div style="display:flex; gap:10px; align-items:center;">
+            <button onclick="anterior()" style="background:#444; flex:1">⬅</button>
+            <button id="btn-lupa" onclick="mostrarExtra()" style="background:#ff9800; color:#000; flex:0.5; display:${p.estado ? 'block' : 'none'}">🔍</button>
+            <button onclick="gestionarSiguiente()" style="background:var(--accent); color:#1a1a1a; flex:1">➡</button>
+        </div>
     `;
 }
 
 function verificar(resp, boton) {
-    if(respondida) return; 
-    
-    let correcta = preguntasTotales[indicePregunta].correcta;
-    let botones = document.getElementById('opciones').getElementsByTagName('button');
-    const mapeo = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
-    
-    respondida = true;
-    clearInterval(intervalo); 
-    
-    for (let b of botones) b.disabled = true;
-    
-    let indexCorrecta = mapeo[correcta];
-    if(botones[indexCorrecta]) {
-        botones[indexCorrecta].style.background = "#2e7d32";
-        botones[indexCorrecta].style.fontWeight = "bold";
-        botones[indexCorrecta].innerText = "✅ " + botones[indexCorrecta].innerText;
-    }
+    let p = preguntasTotales[indicePregunta];
+    if (p.estado) return; 
 
-    if (resp === correcta) {
+    p.respuestaUsuario = resp;
+    if (resp === p.correcta) {
+        p.estado = 'correcte';
         aciertos++;
     } else {
-        boton.style.background = "#c62828";
-        boton.style.fontWeight = "bold";
-        boton.innerText = "❌ " + boton.innerText;
+        p.estado = 'incorrecte';
         fallos++;
     }
-    iniciarCronometro();
+    mostrarPregunta(); // Recargamos para mostrar colores y lupa
+}
+
+function mostrarExtra() {
+    let p = preguntasTotales[indicePregunta];
+    alert("INFORMACIÓ EXTRA:\n\n" + p.extra);
+}
+
+function anterior() {
+    if (indicePregunta > 0) {
+        indicePregunta--;
+        mostrarPregunta();
+    }
 }
 
 function gestionarSiguiente() {
-    if (!respondida) {
-        blancos++; 
-    }
+    let p = preguntasTotales[indicePregunta];
+    if (!p.estado) blancos++; 
     indicePregunta++;
     mostrarPregunta();
 }
@@ -190,14 +223,16 @@ function mostrarFinal() {
     let nota = aciertos - (fallos * 0.25);
     if (nota < 0) nota = 0;
     
+    registrarLog("Final Test", "-", `Nota: ${nota.toFixed(2)} (A:${aciertos} F:${fallos})`);
+
     document.getElementById('resultado').innerHTML = `
-        <h1 style="color:#ff9800">simulacre finalitzat</h1>
-        <p style="font-size:24px; text-align:center;">nota neta: <strong>${nota.toFixed(2)}</strong></p>
+        <h1 style="color:#ff9800">resultat final</h1>
+        <p style="font-size:32px; text-align:center;"><strong>${nota.toFixed(2)}</strong></p>
         <hr>
         <div style="font-size:18px; line-height:2;">
             <p>✅ encerts: <strong style="color:#4CAF50">${aciertos}</strong></p>
             <p>❌ errades: <strong style="color:#f44336">${fallos}</strong></p>
-            <p>⚪ en blanc: <strong>${blancos}</strong></p>
+            <p>⚪ en blanc: <strong>${preguntasTotales.length - (aciertos + fallos)}</strong></p>
         </div>
     `;
 }
