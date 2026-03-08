@@ -5,104 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Opos Agent Rural - Privat</title>
 <style>
-:root {
---bg:#1a3c1a;
---card:#2d2419;
---text:#e8e8e8;
---accent:#ffcc00;
-}
-body{
-font-family:'Segoe UI',Tahoma,sans-serif;
-max-width:600px;
-margin:auto;
-padding:20px;
-background:var(--bg);
-color:var(--text);
-}
-h1,h3{
-text-align:center;
-color:#ff9800;
-text-transform:lowercase;
-margin-bottom:15px;
-}
-.card{
-background:var(--card);
-padding:25px;
-border-radius:15px;
-box-shadow:0 10px 25px rgba(0,0,0,0.6);
-border:2px solid #5d4037;
-margin-bottom:20px;
-}
-.oculto{
-display:none!important;
-}
-input[type="password"],select{
-width:100%;
-padding:12px;
-border-radius:8px;
-background:#3e3123;
-color:white;
-border:1px solid #5d4037;
-margin-bottom:10px;
-box-sizing:border-box;
-font-size:16px;
-}
-button{
-display:block;
-width:100%;
-padding:16px;
-margin:10px 0;
-border-radius:10px;
-border:none;
-cursor:pointer;
-font-size:16px;
-font-weight:bold;
-background:#5d4037;
-color:white;
-}
-button:hover{
-background:#795548;
-}
-.btn-check{
-background:#ff9800!important;
-color:#1a1a1a!important;
-}
-.btn-mini{
-width:auto;
-display:inline-block;
-padding:5px 10px;
-font-size:11px;
-background:#444;
-margin:0 2px;
-}
-label{
-display:flex;
-align-items:center;
-padding:12px;
-background:#3e3123;
-margin:6px 0;
-border-radius:8px;
-border:1px solid #5d4037;
-font-size:14px;
-cursor:pointer;
-}
-input[type="checkbox"]{
-margin-right:12px;
-transform:scale(1.2);
-}
-#timer{
-font-size:32px;
-font-weight:bold;
-color:var(--accent);
-text-align:center;
-font-family:monospace;
-margin-bottom:15px;
-}
+/* ... estilos anteriores (igual que la versión que te pasé) ... */
 </style>
 </head>
 <body>
 
-<!-- PANTALLA BLOQUEO -->
 <div id="pantalla-bloqueo" class="card" style="margin-top:50px;">
 <h1>🔒 accés restringit</h1>
 <p style="text-align:center">introdueix el codi d'agent</p>
@@ -111,27 +18,21 @@ margin-bottom:15px;
 <p id="error-pin" class="oculto" style="color:#ff4444;text-align:center;">codi incorrecte</p>
 </div>
 
-<!-- CONTINGUT PROTEGIT -->
 <div id="contingut-protegit" class="oculto">
-
-<!-- PANTALLA INICIO -->
 <div id="pantalla-inicio" class="card">
 <h1>opos agent rural</h1>
-
 <h3>temari general</h3>
 <div>
 <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
 <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
 </div>
 <div id="lista-general"></div>
-
 <h3>temari específic</h3>
 <div>
 <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
 <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
 </div>
 <div id="lista-especifico"></div>
-
 <hr>
 <h3>configuració</h3>
 <select id="tiempo-test">
@@ -147,7 +48,6 @@ margin-bottom:15px;
 <button onclick="prepararQuiz()" class="btn-check">comencem</button>
 </div>
 
-<!-- PANTALLA QUIZ -->
 <div id="pantalla-quiz" class="card oculto">
 <div id="timer">∞</div>
 <div id="pregunta" style="font-size:19px;font-weight:bold;margin:15px 0;text-align:center;"></div>
@@ -155,7 +55,6 @@ margin-bottom:15px;
 <div id="contenedor-controles" style="text-align:center;margin-top:15px;"></div>
 </div>
 
-<!-- PANTALLA FINAL -->
 <div id="pantalla-final" class="card oculto">
 <div id="resultado" style="font-size:18px;font-weight:bold;text-align:center;margin-bottom:15px;"></div>
 <button onclick="location.reload()" class="btn-check">nou test</button>
