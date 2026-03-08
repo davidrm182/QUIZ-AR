@@ -7,19 +7,7 @@ let aciertos = 0;
 let fallos = 0;
 let respondida = false;
 
-// PIN
-function validarPin(){
-    const input = document.getElementById("pin-input").value;
-    const error = document.getElementById("error-pin");
-    if(input === PIN_CORRECTO){
-        document.getElementById("pantalla-bloqueo").classList.add("oculto");
-        document.getElementById("contingut-protegit").classList.remove("oculto");
-    }else{
-        error.classList.remove("oculto");
-    }
-}
-
-// TEMAS
+// Map de nombres completos
 const TEMAS_GENERAL = [
 {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
 {id:"tg2",nombre:"2. Organització Administració catalana"},
@@ -50,6 +38,28 @@ const TEMAS_ESPECIFICO = [
 {id:"te21",nombre:"21. Geografia Catalunya"}
 ];
 
+// Obtener nombre completo por id
+function getNombreTema(id){
+    const g = TEMAS_GENERAL.find(t=>t.id===id);
+    if(g) return g.nombre;
+    const e = TEMAS_ESPECIFICO.find(t=>t.id===id);
+    if(e) return e.nombre;
+    return id;
+}
+
+// PIN
+function validarPin(){
+    const input = document.getElementById("pin-input").value;
+    const error = document.getElementById("error-pin");
+    if(input === PIN_CORRECTO){
+        document.getElementById("pantalla-bloqueo").classList.add("oculto");
+        document.getElementById("contingut-protegit").classList.remove("oculto");
+    }else{
+        error.classList.remove("oculto");
+    }
+}
+
+// Generar checks
 function generarChecks(){
     const gen = document.getElementById("lista-general");
     const esp = document.getElementById("lista-especifico");
@@ -61,6 +71,7 @@ function generarChecks(){
     });
 }
 
+// Seleccionar todos o ninguno
 function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
@@ -77,6 +88,7 @@ async function cargarPreguntas(tema){
     rows.forEach(r=>{
         if(!r.c[0]) return;
         lista.push({
+            tema: getNombreTema(tema), // Nombre completo
             pregunta: r.c[0]?.v || "",
             a: r.c[1]?.v || "",
             b: r.c[2]?.v || "",
@@ -129,9 +141,13 @@ function mostrarPregunta(){
     const q = preguntas[indice];
     respondida=false;
 
-    // MARCADOR ARRIBA
+    // MARCADOR + TEMA ARRIBA
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
-    document.getElementById("pregunta").innerHTML = `<div style="margin-bottom:15px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>${q.pregunta}`;
+    document.getElementById("pregunta").innerHTML = `
+        <div style="margin-bottom:5px;font-size:14px;color:#ffcc00;">Tema: ${q.tema}</div>
+        <div style="margin-bottom:10px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>
+        ${q.pregunta}
+    `;
 
     // SHUFFLE RESPUESTAS
     let opciones = [
@@ -151,9 +167,11 @@ function mostrarPregunta(){
     // BOTONES ATRÁS, EXTRA, SIGUIENTE
     const cont = document.getElementById("contenedor-controles");
     cont.innerHTML = `
-        <button onclick="anterior()" style="margin:4px;width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">⬅️ Atrás</button>
-        <button id="btn-extra" onclick="mostrarExtra()" disabled style="margin:4px;width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">🔍 Extra</button>
-        <button onclick="siguiente()" style="margin:4px;width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">➡️ Siguiente</button>
+        <div style="display:flex; justify-content:space-between; margin-top:10px;">
+            <button onclick="anterior()" style="width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">⬅️ Enrere</button>
+            <button id="btn-extra" onclick="mostrarExtra()" disabled style="width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">🔍 Extra</button>
+            <button onclick="siguiente()" style="width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">Següent ➡️</button>
+        </div>
     `;
 }
 
@@ -205,9 +223,10 @@ function siguiente(){
 function actualizarMarcador(){
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
     const preguntaDiv = document.getElementById("pregunta");
-    // Mantener solo la pregunta después del div del marcador
     const textoPregunta = preguntas[indice].pregunta;
-    preguntaDiv.innerHTML = `<div style="margin-bottom:15px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>${textoPregunta}`;
+    preguntaDiv.innerHTML = `<div style="margin-bottom:5px;font-size:14px;color:#ffcc00;">Tema: ${preguntas[indice].tema}</div>
+        <div style="margin-bottom:10px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>
+        ${textoPregunta}`;
 }
 
 // Pantalla final
