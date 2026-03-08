@@ -1,95 +1,88 @@
+Entiendo perfectamente la frustración. Parece que ha habido un problema técnico con la forma en que se visualizan los bloques. Vamos a solucionarlo ahora mismo.
+
+Aquí tienes el código en texto plano directo, sin bloques complejos, para que puedas copiarlo sin problemas.
+
+1. CÓDIGO PARA EL ARCHIVO: index.html
 <!DOCTYPE html>
-<html>
+
+<html lang="ca">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opos Agent Rural - Privat</title>
-    <style>
-        :root { --bg: #1a3c1a; --card: #2d2419; --text: #e8e8e8; --accent: #ffcc00; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: var(--bg); color: var(--text); }
-        h1, h3 { text-align: center; color: #ff9800; text-transform: lowercase; margin-bottom: 15px; }
-        .card { background: var(--card); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); border: 2px solid #5d4037; margin-bottom: 20px; }
-        .oculto { display: none !important; }
-        
-        input[type="password"], select { width: 100%; padding: 12px; border-radius: 8px; background: #3e3123; color: white; border: 1px solid #5d4037; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
-        
-        button { display: block; width: 100%; padding: 16px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.2s; background: #5d4037; color: white; }
-        button:hover { background: #795548; }
-        .btn-check { background: #ff9800 !important; color: #1a1a1a !important; }
-        .btn-mini { width: auto; display: inline-block; padding: 5px 10px; font-size: 11px; background: #444; margin: 0 2px; }
-        
-        label { display: flex; align-items: center; padding: 12px; background: #3e3123; margin: 6px 0; border-radius: 8px; border: 1px solid #5d4037; font-size: 14px; cursor: pointer; }
-        input[type="checkbox"] { margin-right: 12px; transform: scale(1.2); }
-        
-        #timer { font-size: 32px; font-weight: bold; color: var(--accent); text-align: center; font-family: monospace; margin-bottom: 15px; }
-        hr { border: 0; border-top: 1px solid #5d4037; margin: 20px 0; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opos Agent Rural - Privat</title>
+<style>
+:root { --bg: #1a3c1a; --card: #2d2419; --text: #e8e8e8; --accent: #ffcc00; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: var(--bg); color: var(--text); }
+h1, h3 { text-align: center; color: #ff9800; text-transform: lowercase; margin-bottom: 15px; }
+.card { background: var(--card); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); border: 2px solid #5d4037; margin-bottom: 20px; }
+.oculto { display: none !important; }
+input[type="password"], select { width: 100%; padding: 12px; border-radius: 8px; background: #3e3123; color: white; border: 1px solid #5d4037; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
+button { display: block; width: 100%; padding: 16px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.2s; background: #5d4037; color: white; }
+button:hover { background: #795548; }
+.btn-check { background: #ff9800 !important; color: #1a1a1a !important; }
+.btn-mini { width: auto; display: inline-block; padding: 5px 10px; font-size: 11px; background: #444; margin: 0 2px; }
+label { display: flex; align-items: center; padding: 12px; background: #3e3123; margin: 6px 0; border-radius: 8px; border: 1px solid #5d4037; font-size: 14px; cursor: pointer; }
+input[type="checkbox"] { margin-right: 12px; transform: scale(1.2); }
+#timer { font-size: 32px; font-weight: bold; color: var(--accent); text-align: center; font-family: monospace; margin-bottom: 15px; }
+hr { border: 0; border-top: 1px solid #5d4037; margin: 20px 0; }
+</style>
 </head>
 <body>
-
-    <div id="pantalla-bloqueo" class="card" style="margin-top: 50px;">
-        <h1>🔒 accés restringit</h1>
-        <p style="text-align:center">introdueix el codi d'agent:</p>
-        <input type="password" id="pin-input" placeholder="****">
-        <button onclick="validarPin()" class="btn-check">entrar</button>
-        <p id="error-pin" class="oculto" style="color: #ff4444; text-align:center;">codi incorrecte!</p>
-    </div>
-
-    <div id="contingut-protegit" class="oculto">
-        
-        <div id="pantalla-inicio" class="card">
-            <h1>opos agent rural</h1>
-            
-            <div style="display:flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin:0;">temari general</h3>
-                <div>
-                    <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
-                    <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
-                </div>
-            </div>
-            <div id="lista-general" style="margin-bottom:20px;"></div>
-
-            <div style="display:flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin:0;">temari específic</h3>
-                <div>
-                    <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
-                    <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
-                </div>
-            </div>
-            <div id="lista-especifico"></div>
-
-            <hr>
-            <h3>configuració</h3>
-            <select id="tiempo-test">
-                <option value="30">30 minuts</option>
-                <option value="60">60 minuts</option>
-                <option value="90">90 minuts</option>
-            </select>
-            <select id="num-preguntas">
-                <option value="10">10 preguntes</option>
-                <option value="25">25 preguntes</option>
-                <option value="50">50 preguntes</option>
-                <option value="80">80 preguntes</option>
-            </select>
-            <button onclick="prepararQuiz()" class="btn-check">comencem!</button>
-        </div>
-
-        <div id="pantalla-quiz" class="card oculto">
-            <div id="timer">00:00</div>
-            <h2 id="contador" style="font-size:13px; color:#aaa; text-align:center; font-weight:normal;"></h2>
-            <div id="pregunta" style="font-size:19px; font-weight:bold; margin:25px 0; text-align:center; line-height:1.4;"></div>
-            <div id="opciones"></div>
-            <hr>
-            <button id="btn-siguiente" onclick="gestionarSiguiente()" style="background:var(--accent); color:#1a1a1a;">següent pregunta ➔</button>
-        </div>
-
-        <div id="pantalla-final" class="card oculto">
-            <div id="resultado"></div>
-            <button onclick="location.reload()" class="btn-check">nou test</button>
-        </div>
-
-    </div> 
-
-    <script src="script.js"></script>
+<div id="pantalla-bloqueo" class="card" style="margin-top: 50px;">
+<h1>🔒 accés restringit</h1>
+<p style="text-align:center">introdueix el codi d'agent:</p>
+<input type="password" id="pin-input" placeholder="****">
+<button onclick="validarPin()" class="btn-check">entrar</button>
+<p id="error-pin" class="oculto" style="color: #ff4444; text-align:center;">codi incorrecte!</p>
+</div>
+<div id="contingut-protegit" class="oculto">
+<div id="pantalla-inicio" class="card">
+<h1>opos agent rural</h1>
+<div style="display:flex; justify-content: space-between; align-items: center;">
+<h3 style="margin:0;">temari general</h3>
+<div>
+<button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
+<button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
+</div>
+</div>
+<div id="lista-general" style="margin-bottom:20px;"></div>
+<div style="display:flex; justify-content: space-between; align-items: center;">
+<h3 style="margin:0;">temari específic</h3>
+<div>
+<button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
+<button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
+</div>
+</div>
+<div id="lista-especifico"></div>
+<hr>
+<h3>configuració</h3>
+<select id="tiempo-test">
+<option value="0">Sense temps</option>
+<option value="30">30 minuts</option>
+<option value="60">60 minuts</option>
+<option value="90">90 minuts</option>
+</select>
+<select id="num-preguntas">
+<option value="10">10 preguntes</option>
+<option value="25">25 preguntes</option>
+<option value="50">50 preguntes</option>
+<option value="80">80 preguntes</option>
+</select>
+<button onclick="prepararQuiz()" class="btn-check">comencem!</button>
+</div>
+<div id="pantalla-quiz" class="card oculto">
+<div id="timer">∞</div>
+<h2 id="contador" style="font-size:13px; color:#aaa; text-align:center; font-weight:normal; line-height:1.5;"></h2>
+<div id="pregunta" style="font-size:19px; font-weight:bold; margin:25px 0; text-align:center; line-height:1.4;"></div>
+<div id="opciones"></div>
+<hr>
+<div id="contenedor-controles"></div>
+</div>
+<div id="pantalla-final" class="card oculto">
+<div id="resultado"></div>
+<button onclick="location.reload()" class="btn-check">nou test</button>
+</div>
+</div>
+<script src="script.js"></script>
 </body>
 </html>
