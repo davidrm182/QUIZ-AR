@@ -13,16 +13,7 @@ body: JSON.stringify({ accion: accion, pin: pin, resultado: resultado })
 function validarPin() {
 const input = document.getElementById('pin-input').value;
 const errorMsg = document.getElementById('error-pin');
-if (input === PIN_CORRECTO) {
-registrarLog("Login", "*****", "✅ ACCÉS CORRECTE");
-document.getElementById('pantalla-bloqueo').classList.add('oculto');
-document.getElementById('contingut-protegit').classList.remove('oculto');
-generarChecks();
-} else {
-registrarLog("Login", input, "❌ PIN INCORRECTE");
-errorMsg.classList.remove('oculto');
-document.getElementById('pin-input').value = "";
-}
+
 }
 
 const TEMAS_GENERAL = [
@@ -59,11 +50,8 @@ const TEMAS_ESPECIFICO = [
 function generarChecks() {
 const genDiv = document.getElementById('lista-general');
 const espDiv = document.getElementById('lista-especifico');
-if (genDiv && espDiv) {
-genDiv.innerHTML = ""; espDiv.innerHTML = "";
-TEMAS_GENERAL.forEach(t => { genDiv.innerHTML += <label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>; });
-TEMAS_ESPECIFICO.forEach(t => { espDiv.innerHTML += <label><input type="checkbox" class="tema-check esp" value="${t.id}"> ${t.nombre}</label>; });
-}
+if (!genDiv || !espDiv) return;
+
 }
 
 function seleccionar(estado, clase) {
@@ -77,49 +65,7 @@ async function prepararQuiz() {
 const checks = document.querySelectorAll('.tema-check:checked');
 const cantidad = parseInt(document.getElementById('num-preguntas').value);
 const minutos = parseInt(document.getElementById('tiempo-test').value);
-if (checks.length === 0) return alert("selecciona temes primer");
-preguntasTotales = [];
-indicePregunta = 0; aciertos = 0; fallos = 0; blancos = 0;
-document.getElementById('pantalla-inicio').innerHTML = "<h2>carregant preguntes...</h2>";
-for (let check of checks) {
-const URL = https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${check.value};
-try {
-const res = await fetch(URL);
-const texto = await res.text();
-const json = JSON.parse(texto.substring(texto.indexOf('{'), texto.lastIndexOf('}') + 1));
-const filas = json.table.rows.slice(1).map(row => {
-let pObj = {
-pregunta: row.c[0]?.v || '',
-a: row.c[1]?.v || '', b: row.c[2]?.v || '', c: row.c[3]?.v || '', d: row.c[4]?.v || '',
-correcta: row.c[5]?.v?.toString().toLowerCase().trim() || '',
-extra: row.c[6]?.v || 'No hi ha informació extra disponible.',
-estado: null,
-respuestaUsuario: null,
-opcionesMezcladas: []
-};
-let opts = [{id:'a', t:pObj.a}, {id:'b', t:pObj.b}, {id:'c', t:pObj.c}, {id:'d', t:pObj.d}];
-pObj.opcionesMezcladas = opts.sort(() => Math.random() - 0.5);
-return pObj;
-});
-preguntasTotales = preguntasTotales.concat(filas);
-} catch (e) { console.error("Error en tema: " + check.value); }
-}
-if (preguntasTotales.length === 0) {
-alert("No s'han trobat preguntes.");
-location.reload();
-return;
-}
-preguntasTotales.sort(() => Math.random() - 0.5);
-preguntasTotales = preguntasTotales.slice(0, cantidad);
-if (minutos > 0) {
-tiempoRestante = minutos * 60;
-iniciarCronometro();
-} else {
-document.getElementById('timer').innerText = "∞";
-}
-document.getElementById('pantalla-inicio').classList.add('oculto');
-document.getElementById('pantalla-quiz').classList.remove('oculto');
-mostrarPregunta();
+
 }
 
 function actualizarMarcador() {
@@ -139,32 +85,18 @@ if (tiempoRestante <= 0) { clearInterval(intervalo); mostrarFinal(); }
 }
 
 function mostrarPregunta() {
-if (indicePregunta >= preguntasTotales.length) { clearInterval(intervalo); mostrarFinal(); return; }
-let p = preguntasTotales[indicePregunta];
-document.getElementById('pregunta').innerText = p.pregunta;
-actualizarMarcador();
-let htmlOpts = "";
-p.opcionesMezcladas.forEach(opt => {
-let color = "#3e3123";
-let extraEstilo = "";
-if (p.estado) {
-extraEstilo = "disabled";
-if (opt.id === p.correcta) color = "#2e7d32";
-else if (opt.id === p.respuestaUsuario) color = "#c62828";
+if (indicePregunta >= preguntasTotales.length) {
+clearInterval(intervalo);
+mostrarFinal();
+return;
 }
-htmlOpts += <button ${extraEstilo} onclick="verificar('${opt.id}', this)" style="background:${color}; margin: 5px 0;">${opt.t}</button>;
-});
-document.getElementById('opciones').innerHTML = htmlOpts;
-document.getElementById('contenedor-controles').innerHTML = <div style="display:flex; gap:10px; margin-top:10px;"><button onclick="anterior()" style="background:#444; flex:1">⬅</button><button id="btn-lupa" onclick="mostrarExtra()" style="background:#ff9800; color:#000; flex:0.5; display:${p.estado ? 'block' : 'none'}">🔍</button><button onclick="gestionarSiguiente()" style="background:var(--accent); color:#1a1a1a; flex:1">➡</button></div>;
+
 }
 
 function verificar(resp, boton) {
 let p = preguntasTotales[indicePregunta];
 if (p.estado) return;
-p.respuestaUsuario = resp;
-if (resp === p.correcta) { p.estado = 'correcte'; aciertos++; }
-else { p.estado = 'incorrecte'; fallos++; }
-mostrarPregunta();
+
 }
 
 function mostrarExtra() {
@@ -173,7 +105,10 @@ alert("INFORMACIÓ EXTRA:\n\n" + p.extra);
 }
 
 function anterior() {
-if (indicePregunta > 0) { indicePregunta--; mostrarPregunta(); }
+if (indicePregunta > 0) {
+indicePregunta--;
+mostrarPregunta();
+}
 }
 
 function gestionarSiguiente() {
@@ -189,6 +124,5 @@ document.getElementById('pantalla-quiz').classList.add('oculto');
 document.getElementById('pantalla-final').classList.remove('oculto');
 let nota = aciertos - (fallos * 0.25);
 if (nota < 0) nota = 0;
-registrarLog("Final Test", "-", Nota: ${nota.toFixed(2)} (A:${aciertos} F:${fallos}));
-document.getElementById('resultado').innerHTML = <h1 style="color:#ff9800">resultat final</h1><p style="font-size:32px; text-align:center;"><strong>${nota.toFixed(2)}</strong></p><hr><div style="font-size:18px; line-height:2;"><p>✅ encerts: <strong style="color:#4CAF50">${aciertos}</strong></p><p>❌ errades: <strong style="color:#f44336">${fallos}</strong></p><p>⚪ en blanc: <strong>${preguntasTotales.length - (aciertos + fallos)}</strong></p></div>;
+
 }
