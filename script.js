@@ -1,16 +1,23 @@
-const PIN_CORRECTO="1989";
+const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
+const PIN_CORRECTO = "1989";
 
-function validarPin(){
+let preguntas = [];
+let indice = 0;
+let aciertos = 0;
 
-const input=document.getElementById("pin-input").value;
-const error=document.getElementById("error-pin");
 
-if(input===PIN_CORRECTO){
+
+function validarPin() {
+
+const input = document.getElementById("pin-input").value;
+const error = document.getElementById("error-pin");
+
+if (input === PIN_CORRECTO) {
 
 document.getElementById("pantalla-bloqueo").classList.add("oculto");
 document.getElementById("contingut-protegit").classList.remove("oculto");
 
-}else{
+} else {
 
 error.classList.remove("oculto");
 
@@ -20,25 +27,38 @@ error.classList.remove("oculto");
 
 
 
-const TEMAS_GENERAL=[
+const TEMAS_GENERAL = [
 
 { id:"tg1", nombre:"1. Constitució i Estatut d'Autonomia" },
-{ id:"tg2", nombre:"2. Organització de l'Administració catalana" },
+{ id:"tg2", nombre:"2. Organització Administració catalana" },
 { id:"tg3", nombre:"3. Procediment administratiu" },
-{ id:"tg4", nombre:"4. Personal de les administracions públiques" }
+{ id:"tg4", nombre:"4. Personal administracions públiques" }
 
 ];
 
-
-
-const TEMAS_ESPECIFICO=[
+const TEMAS_ESPECIFICO = [
 
 { id:"te1", nombre:"1. Departament d'Interior" },
 { id:"te2", nombre:"2. Agents Rurals policia judicial" },
 { id:"te3", nombre:"3. Activitat cinegètica" },
 { id:"te4", nombre:"4. Reglament d'armes" },
 { id:"te5", nombre:"5. Activitat piscícola" },
-{ id:"te6", nombre:"6. Protecció d'animals" }
+{ id:"te6", nombre:"6. Protecció animals" },
+{ id:"te7", nombre:"7. Protecció fauna salvatge" },
+{ id:"te8", nombre:"8. Espècies invasores" },
+{ id:"te9", nombre:"9. Prevenció incendis forestals" },
+{ id:"te10", nombre:"10. Infraestructures medi natural" },
+{ id:"te11", nombre:"11. Gestió forestal" },
+{ id:"te12", nombre:"12. Flora protegida" },
+{ id:"te13", nombre:"13. Biodiversitat" },
+{ id:"te14", nombre:"14. Espais naturals" },
+{ id:"te15", nombre:"15. Ús recreatiu espais naturals" },
+{ id:"te16", nombre:"16. Patrimoni cultural medi natural" },
+{ id:"te17", nombre:"17. Aigües Catalunya" },
+{ id:"te18", nombre:"18. Residus" },
+{ id:"te19", nombre:"19. Activitats extractives" },
+{ id:"te20", nombre:"20. Protecció civil" },
+{ id:"te21", nombre:"21. Geografia Catalunya" }
 
 ];
 
@@ -46,32 +66,26 @@ const TEMAS_ESPECIFICO=[
 
 function generarChecks(){
 
-const gen=document.getElementById("lista-general");
-const esp=document.getElementById("lista-especifico");
+const gen = document.getElementById("lista-general");
+const esp = document.getElementById("lista-especifico");
 
-TEMAS_GENERAL.forEach(t=>{
+TEMAS_GENERAL.forEach(t => {
 
-gen.innerHTML+=`
-
+gen.innerHTML += `
 <label>
-<input type="checkbox" class="tema-check gen">
+<input type="checkbox" class="tema-check gen" value="${t.id}">
 ${t.nombre}
-</label>
-
-`;
+</label>`;
 
 });
 
-TEMAS_ESPECIFICO.forEach(t=>{
+TEMAS_ESPECIFICO.forEach(t => {
 
-esp.innerHTML+=`
-
+esp.innerHTML += `
 <label>
-<input type="checkbox" class="tema-check esp">
+<input type="checkbox" class="tema-check esp" value="${t.id}">
 ${t.nombre}
-</label>
-
-`;
+</label>`;
 
 });
 
@@ -82,38 +96,91 @@ ${t.nombre}
 function seleccionar(estado,clase){
 
 document.querySelectorAll(".tema-check."+clase)
-.forEach(cb=>cb.checked=estado);
+.forEach(cb => cb.checked = estado);
 
 }
 
 
 
-let preguntas=[
-{
-p:"Quina és la capital de Catalunya?",
-o:["Girona","Barcelona","Tarragona","Lleida"],
-c:1
-},
-{
-p:"Quants parcs naturals hi ha aproximadament a Catalunya?",
-o:["5","10","15","20"],
-c:1
+async function cargarPreguntas(tema){
+
+const url = `https://opensheet.elk.sh/${SHEET_ID}/${tema}`;
+
+const res = await fetch(url);
+
+const data = await res.json();
+
+return data.map(p => ({
+
+pregunta: p["Question"],
+a: p["A"],
+b: p["B"],
+c: p["C"],
+d: p["D"],
+correcta: p["CORRECT ANSWER"].trim(),
+extra: p["Extra"]
+
+}));
+
 }
-];
 
 
 
-let indice=0;
-let aciertos=0;
+async function prepararQuiz(){
 
+const temasSeleccionados = [
+...document.querySelectorAll(".tema-check:checked")
+].map(t => t.value);
 
+if(temasSeleccionados.length === 0){
 
-function prepararQuiz(){
+alert("Selecciona almenys un tema");
+return;
 
-document.getElementById("pantalla-inicio").classList.add("oculto");
-document.getElementById("pantalla-quiz").classList.remove("oculto");
+}
+
+preguntas = [];
+
+for(let tema of temasSeleccionados){
+
+const preguntasTema = await cargarPreguntas(tema);
+
+preguntas = preguntas.concat(preguntasTema);
+
+}
+
+mezclar(preguntas);
+
+let cantidad = parseInt(
+document.getElementById("num-preguntas").value
+);
+
+preguntas = preguntas.slice(0,cantidad);
+
+indice = 0;
+aciertos = 0;
+
+document.getElementById("pantalla-inicio")
+.classList.add("oculto");
+
+document.getElementById("pantalla-quiz")
+.classList.remove("oculto");
 
 mostrarPregunta();
+
+}
+
+
+
+function mezclar(array){
+
+for(let i=array.length-1;i>0;i--){
+
+const j=Math.floor(Math.random()*(i+1));
+
+[array[i],array[j]]=[array[j],array[i]];
+
+}
 
 }
 
@@ -121,36 +188,47 @@ mostrarPregunta();
 
 function mostrarPregunta(){
 
-let q=preguntas[indice];
+let q = preguntas[indice];
 
-document.getElementById("pregunta").innerText=q.p;
+document.getElementById("pregunta")
+.innerText = q.pregunta;
 
 let html="";
 
-q.o.forEach((op,i)=>{
+["a","b","c","d"].forEach(letra => {
 
-html+=`<button onclick="responder(${i})">${op}</button>`;
+html += `
+<button onclick="responder('${letra}')">
+${q[letra]}
+</button>`;
 
 });
 
-document.getElementById("opciones").innerHTML=html;
+document.getElementById("opciones")
+.innerHTML = html;
 
 }
 
 
 
-function responder(i){
+function responder(resp){
 
-if(i===preguntas[indice].c){
+if(resp === preguntas[indice].correcta.toLowerCase()){
+
 aciertos++;
+
 }
 
 indice++;
 
-if(indice>=preguntas.length){
+if(indice >= preguntas.length){
+
 final();
+
 }else{
+
 mostrarPregunta();
+
 }
 
 }
@@ -159,14 +237,19 @@ mostrarPregunta();
 
 function final(){
 
-document.getElementById("pantalla-quiz").classList.add("oculto");
-document.getElementById("pantalla-final").classList.remove("oculto");
+document.getElementById("pantalla-quiz")
+.classList.add("oculto");
 
-document.getElementById("resultado").innerHTML=
-`Encerts: ${aciertos} / ${preguntas.length}`;
+document.getElementById("pantalla-final")
+.classList.remove("oculto");
+
+document.getElementById("resultado")
+.innerHTML = `Encerts: ${aciertos} / ${preguntas.length}`;
 
 }
 
 
 
-window.onload=generarChecks;
+window.onload = generarChecks;
+
+
