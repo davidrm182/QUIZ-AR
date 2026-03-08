@@ -116,7 +116,7 @@ async function prepararQuiz(){
     mostrarPregunta();
 }
 
-// Mezclar preguntas
+// Mezclar array
 function mezclar(array){
     for(let i=array.length-1;i>0;i--){
         const j=Math.floor(Math.random()*(i+1));
@@ -128,22 +128,32 @@ function mezclar(array){
 function mostrarPregunta(){
     const q = preguntas[indice];
     respondida=false;
-    document.getElementById("pregunta").innerText = q.pregunta;
 
-    let html="";
-    ["a","b","c","d"].forEach(letra=>{
-        html += `<button id="btn-${letra}" onclick="responder('${letra}')" style="margin:4px;">${q[letra]}</button>`;
+    // MARCADOR ARRIBA
+    const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
+    document.getElementById("pregunta").innerHTML = `<div style="margin-bottom:15px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>${q.pregunta}`;
+
+    // SHUFFLE RESPUESTAS
+    let opciones = [
+        {letra:"a", texto:q.a},
+        {letra:"b", texto:q.b},
+        {letra:"c", texto:q.c},
+        {letra:"d", texto:q.d}
+    ];
+    mezclar(opciones);
+
+    let html = "";
+    opciones.forEach(o=>{
+        html += `<button id="btn-${o.letra}" onclick="responder('${o.letra}')" style="margin:4px;width:48%;padding:12px;font-size:16px;">${o.texto}</button>`;
     });
-
     document.getElementById("opciones").innerHTML = html;
 
-    // Botones control debajo
+    // BOTONES ATRÁS, EXTRA, SIGUIENTE
     const cont = document.getElementById("contenedor-controles");
     cont.innerHTML = `
-        <button onclick="anterior()" class="btn-mini">⬅️ Atrás</button>
-        <button id="btn-extra" onclick="mostrarExtra()" class="btn-mini" disabled>🔍 Extra</button>
-        <button onclick="siguiente()" class="btn-mini">➡️ Siguiente</button>
-        <div style="margin-top:10px;">Aciertos: ${aciertos} | Fallos: ${fallos} | Nota: ${((aciertos - fallos*0.25).toFixed(2))}</div>
+        <button onclick="anterior()" style="margin:4px;width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">⬅️ Atrás</button>
+        <button id="btn-extra" onclick="mostrarExtra()" disabled style="margin:4px;width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">🔍 Extra</button>
+        <button onclick="siguiente()" style="margin:4px;width:30%;padding:12px;font-size:16px;background:#ffcc00;color:#1a1a1a;border-radius:8px;">➡️ Siguiente</button>
     `;
 }
 
@@ -161,7 +171,7 @@ function responder(resp){
         document.getElementById(`btn-${resp}`).style.backgroundColor="#f44336";
         if(correcta) document.getElementById(`btn-${correcta}`).style.backgroundColor="#4CAF50";
     }
-    document.getElementById("btn-extra").disabled = false;
+    document.getElementById("btn-extra").disabled=false;
     actualizarMarcador();
 }
 
@@ -191,19 +201,21 @@ function siguiente(){
     }
 }
 
-// Actualizar marcador dinámico
+// Actualizar marcador (arriba)
 function actualizarMarcador(){
-    const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2);
-    const cont = document.querySelector("#contenedor-controles div");
-    if(cont) cont.innerHTML = `Aciertos: ${aciertos} | Fallos: ${fallos} | Nota: ${nota}`;
+    const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
+    const preguntaDiv = document.getElementById("pregunta");
+    // Mantener solo la pregunta después del div del marcador
+    const textoPregunta = preguntas[indice].pregunta;
+    preguntaDiv.innerHTML = `<div style="margin-bottom:15px;">Encerts: ${aciertos} | Errors: ${fallos} | Nota: ${nota}</div>${textoPregunta}`;
 }
 
 // Pantalla final
 function final(){
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
-    const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2);
-    document.getElementById("resultado").innerHTML = `Encerts: ${aciertos} / ${preguntas.length} <br> Fallos: ${fallos} <br> Nota final: <strong>${nota}</strong>`;
+    const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
+    document.getElementById("resultado").innerHTML = `Encerts: ${aciertos} / ${preguntas.length} <br> Errors: ${fallos} <br> Nota final: <strong>${nota}</strong>`;
 }
 
 window.onload = generarChecks;
