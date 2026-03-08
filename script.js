@@ -60,7 +60,7 @@ function validarPin(){
 
 function generarChecks(){
     const gen = document.getElementById("lista-general");
-    const esp = document.getElementById("lista-especifico");
+    const esp = document.getElementById("lista-especifico"); // ID CORREGIDO
     if(!gen || !esp) return;
     gen.innerHTML = ""; esp.innerHTML = "";
     TEMAS_GENERAL.forEach(t=>{
@@ -75,18 +75,18 @@ function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-async function cargarPreguntas(tema){
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${tema}`;
-    const res = await fetch(url);
-    let text = await res.text();
-    text = text.substring(47).slice(0,-2);
-    const json = JSON.parse(text);
-    const rows = json.table.rows;
-    let lista = [];
-    rows.forEach(r=>{
-        if(!r.c || !r.c[0]) return;
-        lista.push({
-            tema: getNombreTema(tema),
+async function cargarPreguntas(temaId){
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}`;
+    try {
+        const res = await fetch(url);
+        const text = await res.text();
+        // Limpiamos el JSON de Google
+        const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+        const json = JSON.parse(jsonText);
+        const rows = json.table.rows;
+        
+        return rows.filter(r => r.c && r.c[0] && r.c[0].v).map(r => ({
+            tema: getNombreTema(temaId),
             pregunta: r.c[0]?.v || "",
             a: r.c[1]?.v || "",
             b: r.c[2]?.v || "",
@@ -94,29 +94,39 @@ async function cargarPreguntas(tema){
             d: r.c[4]?.v || "",
             correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
             extra: r.c[6]?.v || ""
-        });
-    });
-    return lista;
+        }));
+    } catch (e) {
+        console.error("Error cargando tema " + temaId, e);
+        return [];
+    }
 }
 
 async function prepararQuiz(){
-    const temasSeleccionados=[...document.querySelectorAll(".tema-check:checked")].map(t=>t.value);
-    if(temasSeleccionados.length===0){ alert("Selecciona almenys un tema"); return; }
+    const temasSeleccionados = [...document.querySelectorAll(".tema-check:checked")].map(t=>t.value);
+    if(temasSeleccionados.length === 0){ alert("Selecciona almenys un tema"); return; }
     
-    preguntas=[]; indice=0; aciertos=0; fallos=0; respondida=false;
-    
-    document.getElementById("pantalla-inicio").innerHTML = "<h2>Carregant preguntes...</h2>";
+    // Feedback visual de carga
+    const pantallaInicio = document.getElementById("pantalla-inicio");
+    const originalHTML = pantallaInicio.innerHTML;
+    pantallaInicio.innerHTML = `<div class="card"><h3>📦 Carregant preguntes...</h3><p>Això pot tardar uns segons.</p></div>`;
 
-    for(let tema of temasSeleccionados){
-        try{
-            const p = await cargarPreguntas(tema);
-            preguntas = preguntas.concat(p);
-        }catch(e){ console.error("Error cargando:",tema); }
+    preguntas = []; indice = 0; aciertos = 0; fallos = 0; respondida = false;
+
+    for(let id of temasSeleccionados){
+        const lista = await cargarPreguntas(id);
+        preguntas = preguntas.concat(lista);
+    }
+
+    if(preguntas.length === 0){ 
+        alert("No s'han trobat preguntes en aquests fulls de càlcul."); 
+        pantallaInicio.innerHTML = originalHTML;
+        generarChecks();
+        return; 
     }
 
     mezclar(preguntas);
-    const cantidad=parseInt(document.getElementById("num-preguntas").value);
-    preguntas=preguntas.slice(0,cantidad);
+    const cantidad = parseInt(document.getElementById("num-preguntas").value);
+    preguntas = preguntas.slice(0, cantidad);
     
     document.getElementById("pantalla-inicio").classList.add("oculto");
     document.getElementById("pantalla-quiz").classList.remove("oculto");
@@ -136,9 +146,9 @@ function mostrarPregunta(){
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
     
     document.getElementById("pregunta").innerHTML = `
-        <div style="font-size:13px; color:#ffcc00; margin-bottom:5px;">${q.tema}</div>
-        <div style="font-size:14px; margin-bottom:15px;">Pregs: ${indice + 1}/${preguntas.length} | Nota: ${nota}</div>
-        <div style="text-align:center;">${q.pregunta}</div>
+        <div style="font-size:13px; color:#ffcc00; margin-bottom:5px; text-align:center;">${q.tema}</div>
+        <div style="font-size:14px; margin-bottom:15px; text-align:center;">Pregunta ${indice + 1}/${preguntas.length} | Nota: ${nota}</div>
+        <div style="text-align:center; font-weight:bold;">${q.pregunta}</div>
     `;
 
     let opciones = [
@@ -149,20 +159,19 @@ function mostrarPregunta(){
 
     let html = "";
     opciones.forEach(o=>{
-        // Botones en bloque (uno debajo de otro)
         html += `<button id="btn-${o.letra}" onclick="responder('${o.letra}')" 
-                 style="width:100%; margin:5px 0; padding:15px; font-size:15px; text-align:left; background:#3e3123; color:white; border-radius:10px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
-                 <span>${o.texto}</span>
-                 <span id="icon-${o.letra}"></span>
+                 style="width:100%; margin:8px 0; padding:15px; font-size:15px; text-align:left; background:#3e3123; color:white; border-radius:10px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
+                 <span style="max-width:90%">${o.texto}</span>
+                 <span id="icon-${o.letra}" style="font-size:20px;"></span>
                  </button>`;
     });
     document.getElementById("opciones").innerHTML = html;
 
     document.getElementById("contenedor-controles").innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:10px;">
-            <button onclick="anterior()" style="flex:1; background:#5d4037;">⬅️</button>
-            <button id="btn-extra" onclick="mostrarExtra()" disabled style="flex:1; background:#5d4037;">🔍 Info</button>
-            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black;">Següent ➡️</button>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px;">
+            <button onclick="anterior()" style="flex:1; background:#5d4037; padding:12px;">⬅️</button>
+            <button id="btn-extra" onclick="mostrarExtra()" disabled style="flex:1; background:#5d4037; padding:12px;">🔍 Info</button>
+            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black; padding:12px;">Següent ➡️</button>
         </div>
     `;
 }
@@ -173,7 +182,6 @@ function responder(resp){
     const q = preguntas[indice];
     const correcta = q.correcta;
     
-    // Colorear e insertar iconos
     if(resp === correcta){ 
         aciertos++; 
         const btn = document.getElementById(`btn-${resp}`);
@@ -187,10 +195,11 @@ function responder(resp){
         btnFallo.style.borderColor = "#f44336";
         document.getElementById(`icon-${resp}`).innerHTML = "❌";
         
-        // Mostrar la correcta también
         const btnCorrecto = document.getElementById(`btn-${correcta}`);
-        btnCorrecto.style.backgroundColor = "#2e7d32";
-        document.getElementById(`icon-${correcta}`).innerHTML = "✅";
+        if(btnCorrecto) {
+            btnCorrecto.style.backgroundColor = "#2e7d32";
+            document.getElementById(`icon-${correcta}`).innerHTML = "✅";
+        }
     }
     document.getElementById("btn-extra").disabled = false;
 }
@@ -216,10 +225,12 @@ function final(){
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
     document.getElementById("resultado").innerHTML = `
         <h2 style="color:#ff9800">Test Finalitzat</h2>
-        <div style="font-size:20px; line-height:1.6;">
+        <div style="font-size:20px; line-height:2;">
             Encerts: ${aciertos}<br>
-            Errors: ${fallos}<br>
-            Nota Final: <span style="font-size:30px;">${nota}</span>
+            Errors: ${fallos}<br><br>
+            <div style="background:#3e3123; padding:20px; border-radius:10px;">
+                Nota Final: <span style="font-size:35px; color:#ff9800;">${nota}</span>
+            </div>
         </div>`;
 }
 
