@@ -7,7 +7,7 @@ let aciertos = 0;
 let fallos = 0;
 let respondida = false;
 
-// Map de nombres completos
+// 1. LISTADO DE TEMAS (Asegúrate que los nombres de las pestañas en Excel sean exactamente tg1, tg2, te1, etc.)
 const TEMAS_GENERAL = [
     {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
     {id:"tg2",nombre:"2. Organització Administració catalana"},
@@ -39,13 +39,12 @@ const TEMAS_ESPECIFICO = [
 ];
 
 function getNombreTema(id){
-    const g = TEMAS_GENERAL.find(t=>t.id===id);
-    if(g) return g.nombre;
-    const e = TEMAS_ESPECIFICO.find(t=>t.id===id);
-    if(e) return e.nombre;
-    return id;
+    const all = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO];
+    const t = all.find(item => item.id === id);
+    return t ? t.nombre : id;
 }
 
+// 2. INICIO Y LOGIN
 function validarPin(){
     const input = document.getElementById("pin-input").value;
     const error = document.getElementById("error-pin");
@@ -60,7 +59,7 @@ function validarPin(){
 
 function generarChecks(){
     const gen = document.getElementById("lista-general");
-    const esp = document.getElementById("lista-especifico"); // ID CORREGIDO
+    const esp = document.getElementById("lista-especifico");
     if(!gen || !esp) return;
     gen.innerHTML = ""; esp.innerHTML = "";
     TEMAS_GENERAL.forEach(t=>{
@@ -75,40 +74,52 @@ function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
+// 3. CARGA DE DATOS (MÉTODO ROBUSTO)
 async function cargarPreguntas(temaId){
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}`;
     try {
         const res = await fetch(url);
         const text = await res.text();
-        // Limpiamos el JSON de Google
-        const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+        
+        // Limpieza profunda del JSON de Google
+        const inicio = text.indexOf('{');
+        const fin = text.lastIndexOf('}');
+        if (inicio === -1 || fin === -1) throw new Error("Formato JSON inválido");
+        
+        const jsonText = text.substring(inicio, fin + 1);
         const json = JSON.parse(jsonText);
         const rows = json.table.rows;
         
-        return rows.filter(r => r.c && r.c[0] && r.c[0].v).map(r => ({
-            tema: getNombreTema(temaId),
-            pregunta: r.c[0]?.v || "",
-            a: r.c[1]?.v || "",
-            b: r.c[2]?.v || "",
-            c: r.c[3]?.v || "",
-            d: r.c[4]?.v || "",
-            correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
-            extra: r.c[6]?.v || ""
-        }));
+        return rows
+            .filter(r => r.c && r.c[0] && r.c[0].v !== null)
+            .map(r => ({
+                tema: getNombreTema(temaId),
+                pregunta: r.c[0]?.v || "",
+                a: r.c[1]?.v || "",
+                b: r.c[2]?.v || "",
+                c: r.c[3]?.v || "",
+                d: r.c[4]?.v || "",
+                correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
+                extra: r.c[6]?.v || ""
+            }));
     } catch (e) {
-        console.error("Error cargando tema " + temaId, e);
+        console.error("Error en tema " + temaId + ":", e);
         return [];
     }
 }
 
+// 4. PREPARACIÓN DEL QUIZ
 async function prepararQuiz(){
-    const temasSeleccionados = [...document.querySelectorAll(".tema-check:checked")].map(t=>t.value);
+    const checks = document.querySelectorAll(".tema-check:checked");
+    const temasSeleccionados = [...checks].map(t=>t.value);
+    
     if(temasSeleccionados.length === 0){ alert("Selecciona almenys un tema"); return; }
     
-    // Feedback visual de carga
-    const pantallaInicio = document.getElementById("pantalla-inicio");
-    const originalHTML = pantallaInicio.innerHTML;
-    pantallaInicio.innerHTML = `<div class="card"><h3>📦 Carregant preguntes...</h3><p>Això pot tardar uns segons.</p></div>`;
+    // Cambiar estado visual
+    const btn = document.querySelector("button[onclick='prepararQuiz()']");
+    const originalText = btn.innerText;
+    btn.innerText = "Cargando datos...";
+    btn.disabled = true;
 
     preguntas = []; indice = 0; aciertos = 0; fallos = 0; respondida = false;
 
@@ -118,9 +129,9 @@ async function prepararQuiz(){
     }
 
     if(preguntas.length === 0){ 
-        alert("No s'han trobat preguntes en aquests fulls de càlcul."); 
-        pantallaInicio.innerHTML = originalHTML;
-        generarChecks();
+        alert("ERROR: No se han podido leer preguntas. Revisa que las pestañas del Excel se llamen exactamente como los IDs (tg1, te1, etc.) y que el Excel sea público."); 
+        btn.innerText = originalText;
+        btn.disabled = false;
         return; 
     }
 
@@ -140,38 +151,41 @@ function mezclar(array){
     }
 }
 
+// 5. DINÁMICA DEL TEST
 function mostrarPregunta(){
     const q = preguntas[indice];
     respondida = false;
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
     
     document.getElementById("pregunta").innerHTML = `
-        <div style="font-size:13px; color:#ffcc00; margin-bottom:5px; text-align:center;">${q.tema}</div>
-        <div style="font-size:14px; margin-bottom:15px; text-align:center;">Pregunta ${indice + 1}/${preguntas.length} | Nota: ${nota}</div>
-        <div style="text-align:center; font-weight:bold;">${q.pregunta}</div>
+        <div style="font-size:12px; color:#ffcc00; margin-bottom:5px; text-align:center; opacity:0.8;">${q.tema}</div>
+        <div style="font-size:14px; margin-bottom:15px; text-align:center; letter-spacing:1px;">PREGUNTA ${indice + 1}/${preguntas.length} | NOTA: ${nota}</div>
+        <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>
     `;
 
     let opciones = [
         {letra:"a", texto:q.a}, {letra:"b", texto:q.b},
         {letra:"c", texto:q.c}, {letra:"d", texto:q.d}
-    ];
+    ].filter(o => o.texto !== ""); // Solo mostrar opciones que tengan texto
+
     mezclar(opciones);
 
     let html = "";
     opciones.forEach(o=>{
-        html += `<button id="btn-${o.letra}" onclick="responder('${o.letra}')" 
-                 style="width:100%; margin:8px 0; padding:15px; font-size:15px; text-align:left; background:#3e3123; color:white; border-radius:10px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
-                 <span style="max-width:90%">${o.texto}</span>
-                 <span id="icon-${o.letra}" style="font-size:20px;"></span>
-                 </button>`;
+        html += `
+            <button id="btn-${o.letra}" onclick="responder('${o.letra}')" 
+                style="width:100%; margin:8px 0; padding:18px; font-size:15px; text-align:left; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center; transition: 0.3s;">
+                <span style="max-width:85%">${o.texto}</span>
+                <span id="icon-${o.letra}" style="font-size:20px;"></span>
+            </button>`;
     });
     document.getElementById("opciones").innerHTML = html;
 
     document.getElementById("contenedor-controles").innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px;">
-            <button onclick="anterior()" style="flex:1; background:#5d4037; padding:12px;">⬅️</button>
-            <button id="btn-extra" onclick="mostrarExtra()" disabled style="flex:1; background:#5d4037; padding:12px;">🔍 Info</button>
-            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black; padding:12px;">Següent ➡️</button>
+        <div style="display:flex; justify-content:space-between; gap:12px; margin-top:25px;">
+            <button onclick="anterior()" style="flex:1; background:#5d4037; padding:14px; border-radius:10px;">⬅️</button>
+            <button id="btn-extra" onclick="mostrarExtra()" disabled style="flex:1; background:#5d4037; padding:14px; border-radius:10px;">🔍 Info</button>
+            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black; padding:14px; border-radius:10px;">Següent ➡️</button>
         </div>
     `;
 }
@@ -182,20 +196,20 @@ function responder(resp){
     const q = preguntas[indice];
     const correcta = q.correcta;
     
+    const btnElegido = document.getElementById(`btn-${resp}`);
+    const btnCorrecto = document.getElementById(`btn-${correcta}`);
+
     if(resp === correcta){ 
         aciertos++; 
-        const btn = document.getElementById(`btn-${resp}`);
-        btn.style.backgroundColor = "#2e7d32";
-        btn.style.borderColor = "#4CAF50";
+        btnElegido.style.backgroundColor = "#2e7d32";
+        btnElegido.style.borderColor = "#4CAF50";
         document.getElementById(`icon-${resp}`).innerHTML = "✅";
     } else {
         fallos++;
-        const btnFallo = document.getElementById(`btn-${resp}`);
-        btnFallo.style.backgroundColor = "#c62828";
-        btnFallo.style.borderColor = "#f44336";
+        btnElegido.style.backgroundColor = "#c62828";
+        btnElegido.style.borderColor = "#f44336";
         document.getElementById(`icon-${resp}`).innerHTML = "❌";
         
-        const btnCorrecto = document.getElementById(`btn-${correcta}`);
         if(btnCorrecto) {
             btnCorrecto.style.backgroundColor = "#2e7d32";
             document.getElementById(`icon-${correcta}`).innerHTML = "✅";
@@ -205,7 +219,7 @@ function responder(resp){
 }
 
 function mostrarExtra(){
-    alert(preguntas[indice].extra || "Sense informació addicional");
+    alert(preguntas[indice].extra || "No hi ha informació addicional per a aquesta pregunta.");
 }
 
 function anterior(){
@@ -213,7 +227,7 @@ function anterior(){
 }
 
 function siguiente(){
-    if(!respondida){ alert("Respon primer!"); return; }
+    if(!respondida){ alert("Has de respondre la pregunta abans de continuar."); return; }
     indice++;
     if(indice >= preguntas.length) final();
     else mostrarPregunta();
@@ -224,12 +238,13 @@ function final(){
     document.getElementById("pantalla-final").classList.remove("oculto");
     const nota = Math.max(0,(aciertos - fallos*0.25)).toFixed(2).replace(".",",");
     document.getElementById("resultado").innerHTML = `
-        <h2 style="color:#ff9800">Test Finalitzat</h2>
-        <div style="font-size:20px; line-height:2;">
-            Encerts: ${aciertos}<br>
-            Errors: ${fallos}<br><br>
-            <div style="background:#3e3123; padding:20px; border-radius:10px;">
-                Nota Final: <span style="font-size:35px; color:#ff9800;">${nota}</span>
+        <h2 style="color:#ff9800; font-size:28px;">Test Finalitzat</h2>
+        <div style="font-size:18px; line-height:2; margin:20px 0;">
+            ✅ Encerts: <span style="color:#4CAF50">${aciertos}</span><br>
+            ❌ Errors: <span style="color:#f44336">${fallos}</span><br><br>
+            <div style="background:#3e3123; padding:25px; border-radius:15px; border:2px solid #ff9800;">
+                <span style="font-size:14px; text-transform:uppercase; opacity:0.7;">Nota Final</span><br>
+                <span style="font-size:45px; font-weight:bold; color:#ff9800;">${nota}</span>
             </div>
         </div>`;
 }
