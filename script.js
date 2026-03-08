@@ -1,239 +1,172 @@
-const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
-const PIN_CORRECTO = "1989";
-const URL_LOGS = "";
+const PIN_CORRECTO="1989";
 
-function registrarLog(accion, pin, resultado) {
-fetch(URL_LOGS, {
-method: "POST",
-mode: "no-cors",
-body: JSON.stringify({ accion: accion, pin: pin, resultado: resultado })
-});
-}
+function validarPin(){
 
-function validarPin() {
-const input = document.getElementById("pin-input").value;
-const errorMsg = document.getElementById("error-pin");
+const input=document.getElementById("pin-input").value;
+const error=document.getElementById("error-pin");
 
-if(input === PIN_CORRECTO){
-document.getElementById("pantalla-pin").classList.add("oculto");
-document.getElementById("pantalla-config").classList.remove("oculto");
-registrarLog("login", input, "correcto");
+if(input===PIN_CORRECTO){
+
+document.getElementById("pantalla-bloqueo").classList.add("oculto");
+document.getElementById("contingut-protegit").classList.remove("oculto");
+
 }else{
-errorMsg.innerText = "PIN incorrecte";
-registrarLog("login", input, "incorrecto");
-}
+
+error.classList.remove("oculto");
+
 }
 
-const TEMAS_GENERAL = [
-{ id: "tg1", nombre: "1. Constitució i Estatut d'Autonomia" },
-{ id: "tg2", nombre: "2. Organització de l'Administració catalana" },
-{ id: "tg3", nombre: "3. El procediment administratiu" },
-{ id: "tg4", nombre: "4. El personal al servei de les administracions públiques" }
+}
+
+
+
+const TEMAS_GENERAL=[
+
+{ id:"tg1", nombre:"1. Constitució i Estatut d'Autonomia" },
+{ id:"tg2", nombre:"2. Organització de l'Administració catalana" },
+{ id:"tg3", nombre:"3. Procediment administratiu" },
+{ id:"tg4", nombre:"4. Personal de les administracions públiques" }
+
 ];
 
-const TEMAS_ESPECIFICO = [
-{ id: "te1", nombre: "1. El Departament d'Interior" },
-{ id: "te2", nombre: "2. Els Agents Rurals com a policia judicial" },
-{ id: "te3", nombre: "3. L'activitat cinegètica a Catalunya" },
-{ id: "te4", nombre: "4. El Reglament d'armes" },
-{ id: "te5", nombre: "5. L'activitat piscícola a Catalunya" },
-{ id: "te6", nombre: "6. Protecció d'animals" },
-{ id: "te7", nombre: "7. Protecció de la fauna salvatge" },
-{ id: "te8", nombre: "8. Espècies exòtiques invasores" },
-{ id: "te9", nombre: "9. Prevenció d'incendis forestals" },
-{ id: "te10", nombre: "10. Regulació d'infraestructures i activitats" },
-{ id: "te11", nombre: "11. Protecció i gestió de les forests" },
-{ id: "te12", nombre: "12. Normativa bàsica de la flora protegida" },
-{ id: "te13", nombre: "13. Conservació del patrimoni natural i de la biodiversitat" },
-{ id: "te14", nombre: "14. Protecció dels espais naturals terrestres i marítims" },
-{ id: "te15", nombre: "15. Regulació de l'ús recreatiu dels espais naturals" },
-{ id: "te16", nombre: "16. Protecció del patrimoni cultural en el medi natural" },
-{ id: "te17", nombre: "17. Legislació en matèria d'aigües a Catalunya" },
-{ id: "te18", nombre: "18. Gestió de residus" },
-{ id: "te19", nombre: "19. Les activitats extractives" },
-{ id: "te20", nombre: "20. Els plans de protecció civil a Catalunya" },
-{ id: "te21", nombre: "21. Geografia física i política de Catalunya" }
+
+
+const TEMAS_ESPECIFICO=[
+
+{ id:"te1", nombre:"1. Departament d'Interior" },
+{ id:"te2", nombre:"2. Agents Rurals policia judicial" },
+{ id:"te3", nombre:"3. Activitat cinegètica" },
+{ id:"te4", nombre:"4. Reglament d'armes" },
+{ id:"te5", nombre:"5. Activitat piscícola" },
+{ id:"te6", nombre:"6. Protecció d'animals" }
+
 ];
 
-function generarChecks() {
 
-const genDiv = document.getElementById("lista-general");
-const espDiv = document.getElementById("lista-especifico");
 
-if (!genDiv || !espDiv) return;
+function generarChecks(){
+
+const gen=document.getElementById("lista-general");
+const esp=document.getElementById("lista-especifico");
 
 TEMAS_GENERAL.forEach(t=>{
-genDiv.innerHTML += `
+
+gen.innerHTML+=`
+
 <label>
-<input type="checkbox" class="tema-check general" value="${t.id}">
+<input type="checkbox" class="tema-check gen">
 ${t.nombre}
-</label><br>`;
+</label>
+
+`;
+
 });
 
 TEMAS_ESPECIFICO.forEach(t=>{
-espDiv.innerHTML += `
+
+esp.innerHTML+=`
+
 <label>
-<input type="checkbox" class="tema-check especifico" value="${t.id}">
+<input type="checkbox" class="tema-check esp">
 ${t.nombre}
-</label><br>`;
+</label>
+
+`;
+
 });
 
 }
 
-function seleccionar(estado, clase) {
-document.querySelectorAll(".tema-check." + clase).forEach(cb => cb.checked = estado);
+
+
+function seleccionar(estado,clase){
+
+document.querySelectorAll(".tema-check."+clase)
+.forEach(cb=>cb.checked=estado);
+
 }
 
-let preguntasTotales = [];
-let indicePregunta = 0;
-let aciertos = 0;
-let fallos = 0;
-let blancos = 0;
-let tiempoRestante;
-let intervalo;
 
-async function prepararQuiz() {
 
-const checks = document.querySelectorAll(".tema-check:checked");
-const cantidad = parseInt(document.getElementById("num-preguntas").value);
-const minutos = parseInt(document.getElementById("tiempo-test").value);
-
-if(checks.length === 0){
-alert("Selecciona almenys un tema");
-return;
+let preguntas=[
+{
+p:"Quina és la capital de Catalunya?",
+o:["Girona","Barcelona","Tarragona","Lleida"],
+c:1
+},
+{
+p:"Quants parcs naturals hi ha aproximadament a Catalunya?",
+o:["5","10","15","20"],
+c:1
 }
+];
 
-tiempoRestante = minutos * 60;
 
-document.getElementById("pantalla-config").classList.add("oculto");
+
+let indice=0;
+let aciertos=0;
+
+
+
+function prepararQuiz(){
+
+document.getElementById("pantalla-inicio").classList.add("oculto");
 document.getElementById("pantalla-quiz").classList.remove("oculto");
 
-iniciarCronometro();
+mostrarPregunta();
 
 }
 
-function actualizarMarcador() {
 
-let notaActual = aciertos - (fallos * 0.25);
-
-document.getElementById("contador").innerHTML =
-`Pregunta ${indicePregunta + 1} de ${preguntasTotales.length}<br>
-<span style="color:#4CAF50">✅ ${aciertos}</span> |
-<span style="color:#f44336">❌ ${fallos}</span> |
-<span>Nota: <strong>${Math.max(0, notaActual).toFixed(2)}</strong></span>`;
-
-}
-
-function iniciarCronometro() {
-
-if(intervalo) clearInterval(intervalo);
-
-intervalo = setInterval(()=>{
-
-tiempoRestante--;
-
-let m = Math.floor(tiempoRestante / 60);
-let s = tiempoRestante % 60;
-
-document.getElementById("timer").innerText =
-`${m}:${s < 10 ? "0"+s : s}`;
-
-if(tiempoRestante <= 0){
-
-clearInterval(intervalo);
-mostrarFinal();
-
-}
-
-},1000);
-
-}
 
 function mostrarPregunta(){
 
-if(indicePregunta >= preguntasTotales.length){
+let q=preguntas[indice];
 
-clearInterval(intervalo);
-mostrarFinal();
-return;
+document.getElementById("pregunta").innerText=q.p;
+
+let html="";
+
+q.o.forEach((op,i)=>{
+
+html+=`<button onclick="responder(${i})">${op}</button>`;
+
+});
+
+document.getElementById("opciones").innerHTML=html;
 
 }
 
-}
 
-function verificar(resp, boton){
 
-let p = preguntasTotales[indicePregunta];
+function responder(i){
 
-if(p.estado) return;
-
-if(resp === p.correcta){
-
+if(i===preguntas[indice].c){
 aciertos++;
-boton.style.background = "#4CAF50";
+}
 
+indice++;
+
+if(indice>=preguntas.length){
+final();
 }else{
-
-fallos++;
-boton.style.background = "#f44336";
-
-}
-
-p.estado = true;
-
-actualizarMarcador();
-
-}
-
-function mostrarExtra(){
-
-let p = preguntasTotales[indicePregunta];
-
-alert("INFORMACIÓ EXTRA:\n\n" + p.extra);
-
-}
-
-function anterior(){
-
-if(indicePregunta > 0){
-
-indicePregunta--;
 mostrarPregunta();
-
 }
 
 }
 
-function gestionarSiguiente(){
 
-let p = preguntasTotales[indicePregunta];
 
-if(!p.estado) blancos++;
-
-indicePregunta++;
-mostrarPregunta();
-
-}
-
-function mostrarFinal(){
-
-if(intervalo) clearInterval(intervalo);
+function final(){
 
 document.getElementById("pantalla-quiz").classList.add("oculto");
 document.getElementById("pantalla-final").classList.remove("oculto");
 
-let nota = aciertos - (fallos * 0.25);
-
-if(nota < 0) nota = 0;
-
-document.getElementById("resultado-final").innerHTML =
-`Aciertos: ${aciertos}<br>
-Fallos: ${fallos}<br>
-En blanco: ${blancos}<br>
-Nota final: <strong>${nota.toFixed(2)}</strong>`;
+document.getElementById("resultado").innerHTML=
+`Encerts: ${aciertos} / ${preguntas.length}`;
 
 }
 
-window.onload = generarChecks;
 
-}
+
+window.onload=generarChecks;
