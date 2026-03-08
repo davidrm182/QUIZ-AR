@@ -59,10 +59,11 @@ const TEMAS_ESPECIFICO = [
 function generarChecks() {
 const genDiv = document.getElementById('lista-general');
 const espDiv = document.getElementById('lista-especifico');
-if (!genDiv || !espDiv) return;
+if (genDiv && espDiv) {
 genDiv.innerHTML = ""; espDiv.innerHTML = "";
 TEMAS_GENERAL.forEach(t => { genDiv.innerHTML += <label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>; });
 TEMAS_ESPECIFICO.forEach(t => { espDiv.innerHTML += <label><input type="checkbox" class="tema-check esp" value="${t.id}"> ${t.nombre}</label>; });
+}
 }
 
 function seleccionar(estado, clase) {
