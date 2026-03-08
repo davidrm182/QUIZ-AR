@@ -59,6 +59,7 @@ const TEMAS_ESPECIFICO = [
 function generarChecks() {
 const genDiv = document.getElementById('lista-general');
 const espDiv = document.getElementById('lista-especifico');
+if (!genDiv || !espDiv) return;
 genDiv.innerHTML = ""; espDiv.innerHTML = "";
 TEMAS_GENERAL.forEach(t => { genDiv.innerHTML += <label><input type="checkbox" class="tema-check gen" value="${t.id}"> ${t.nombre}</label>; });
 TEMAS_ESPECIFICO.forEach(t => { espDiv.innerHTML += <label><input type="checkbox" class="tema-check esp" value="${t.id}"> ${t.nombre}</label>; });
@@ -103,7 +104,7 @@ preguntasTotales = preguntasTotales.concat(filas);
 } catch (e) { console.error("Error en tema: " + check.value); }
 }
 if (preguntasTotales.length === 0) {
-alert("No s'han trobat preguntes. Revisa el nom de les pestanyes del Excel.");
+alert("No s'han trobat preguntes.");
 location.reload();
 return;
 }
@@ -182,7 +183,7 @@ mostrarPregunta();
 }
 
 function mostrarFinal() {
-clearInterval(intervalo);
+if (intervalo) clearInterval(intervalo);
 document.getElementById('pantalla-quiz').classList.add('oculto');
 document.getElementById('pantalla-final').classList.remove('oculto');
 let nota = aciertos - (fallos * 0.25);
