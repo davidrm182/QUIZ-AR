@@ -19,7 +19,7 @@ function validarPin(){
     }
 }
 
-// Temas
+// TEMAS
 const TEMAS_GENERAL = [
 {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
 {id:"tg2",nombre:"2. Organització Administració catalana"},
@@ -60,6 +60,7 @@ function generarChecks(){
         esp.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}">${t.nombre}</label>`;
     });
 }
+
 function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
@@ -131,13 +132,14 @@ function mostrarPregunta(){
 
     let html="";
     ["a","b","c","d"].forEach(letra=>{
-        html += `<button id="btn-${letra}" onclick="responder('${letra}')">${q[letra]}</button>`;
+        html += `<button id="btn-${letra}" onclick="responder('${letra}')" style="margin:4px;">${q[letra]}</button>`;
     });
 
     document.getElementById("opciones").innerHTML = html;
 
     // Botones control debajo
-    document.getElementById("contenedor-controles").innerHTML = `
+    const cont = document.getElementById("contenedor-controles");
+    cont.innerHTML = `
         <button onclick="anterior()" class="btn-mini">⬅️ Atrás</button>
         <button id="btn-extra" onclick="mostrarExtra()" class="btn-mini" disabled>🔍 Extra</button>
         <button onclick="siguiente()" class="btn-mini">➡️ Siguiente</button>
