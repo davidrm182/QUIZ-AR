@@ -1,5 +1,5 @@
 const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
-// --- ASEGÚRATE DE QUE ESTA URL SEA LA DE TU "IMPLEMENTACIÓN" ---
+// --- PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ---
 const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwADCAbaIihaToLRkOwfUTvVsNHmdyGY5uDcwQKRlP-pTvd1Hc1kNPDXlJLXK23xHj4Iw/exec"; 
 const PIN_CORRECTO = "1989";
 
@@ -10,6 +10,7 @@ let aciertos = 0;
 let fallos = 0;
 let respondida = false;
 
+// 1. LISTADO DE TEMAS COMPLETO (SÍN RECORTES)
 const TEMAS_GENERAL = [
     {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
     {id:"tg2",nombre:"2. Organització Administració catalana"},
@@ -47,7 +48,7 @@ function getNombreTema(id){
     return t ? t.nombre : id;
 }
 
-// 1. LOGIN CON SINCRONIZACIÓN CORREGIDA
+// 2. LOGIN Y SINCRONIZACIÓN (CON ANTI-CACHÉ)
 async function validarPin(){
     const input = document.getElementById("pin-input").value;
     const btn = document.querySelector("button[onclick='validarPin()']");
@@ -55,6 +56,7 @@ async function validarPin(){
         btn.innerText = "Sincronitzant...";
         btn.disabled = true;
         
+        // Cargamos favoritos antes de entrar
         await cargarFavoritosDesdeCloud();
 
         document.getElementById("pantalla-bloqueo").classList.add("oculto");
@@ -65,77 +67,86 @@ async function validarPin(){
     }
 }
 
-// 2. CARGA DESDE LA NUBE (Simplificada para evitar errores de red)
 async function cargarFavoritosDesdeCloud(){
     try {
-        const res = await fetch(URL_APPS_SCRIPT);
-        const data = await res.json();
+        // Añadimos la hora actual para que el PC nunca use una versión guardada
+        const resp = await fetch(URL_APPS_SCRIPT + "?t=" + Date.now());
+        const data = await resp.json();
         favoritosCloud = data || [];
         const contador = document.getElementById("count-favs");
         if(contador) contador.innerText = favoritosCloud.length;
     } catch (e) {
-        console.error("Error favoritos:", e);
+        console.error("Error sincronizando favoritos:", e);
     }
 }
 
+// 3. GENERACIÓN DE INTERFAZ
 function generarChecks(){
     const gen = document.getElementById("lista-general");
     const esp = document.getElementById("lista-especifico");
     if(!gen || !esp) return;
     gen.innerHTML = ""; esp.innerHTML = "";
-    TEMAS_GENERAL.forEach(t=> gen.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}">${t.nombre}</label>`);
-    TEMAS_ESPECIFICO.forEach(t=> esp.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}">${t.nombre}</label>`);
+    TEMAS_GENERAL.forEach(t=>{
+        gen.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}">${t.nombre}</label>`;
+    });
+    TEMAS_ESPECIFICO.forEach(t=>{
+        esp.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}">${t.nombre}</label>`;
+    });
 }
 
 function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-// 3. CARGA DE PREGUNTAS (ROBUSTA)
+// 4. CARGA DE PREGUNTAS (FILA 2 + ANTI-CACHÉ)
 async function cargarPreguntas(temaId){
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}&t=` + Date.now();
     try {
         const res = await fetch(url);
         const text = await res.text();
         const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
         const json = JSON.parse(jsonText);
-        const rows = json.table.rows.slice(1);
+        const rows = json.table.rows.slice(1); // Empezar siempre en fila 2
         
-        return rows.filter(r => r.c && r.c[0] && r.c[0].v !== null).map(r => ({
-            tema: getNombreTema(temaId),
-            pregunta: r.c[0]?.v || "",
-            a: r.c[1]?.v || "",
-            b: r.c[2]?.v || "",
-            c: r.c[3]?.v || "",
-            d: r.c[4]?.v || "",
-            correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
-            extra: r.c[6]?.v || ""
-        }));
+        return rows
+            .filter(r => r.c && r.c[0] && r.c[0].v !== null)
+            .map(r => ({
+                tema: getNombreTema(temaId),
+                pregunta: r.c[0]?.v || "",
+                a: r.c[1]?.v || "",
+                b: r.c[2]?.v || "",
+                c: r.c[3]?.v || "",
+                d: r.c[4]?.v || "",
+                correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
+                extra: r.c[6]?.v || ""
+            }));
     } catch (e) { return []; }
 }
 
 async function prepararQuiz(){
-    const temas = [...document.querySelectorAll(".tema-check:checked")].map(t=>t.value);
-    if(temas.length === 0){ alert("Tria temes"); return; }
+    const checks = document.querySelectorAll(".tema-check:checked");
+    const temasSeleccionados = [...checks].map(t=>t.value);
+    if(temasSeleccionados.length === 0){ alert("Tria algun tema"); return; }
     
     const btn = document.querySelector("button[onclick='prepararQuiz()']");
     btn.innerText = "Carregant..."; btn.disabled = true;
 
     preguntas = [];
-    for(let id of temas) {
+    for(let id of temasSeleccionados){
         const lista = await cargarPreguntas(id);
         preguntas = preguntas.concat(lista);
     }
     
-    if(preguntas.length === 0){ alert("Error"); location.reload(); return; }
+    if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
     
     mezclar(preguntas);
-    preguntas = preguntas.slice(0, parseInt(document.getElementById("num-preguntas").value));
+    const cantidad = parseInt(document.getElementById("num-preguntas").value);
+    preguntas = preguntas.slice(0, cantidad);
     iniciarTest();
 }
 
 function prepararQuizFavs(){
-    if(favoritosCloud.length === 0){ alert("No hi ha preferides"); return; }
+    if(favoritosCloud.length === 0){ alert("No tens preferides"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
     iniciarTest();
@@ -150,7 +161,7 @@ function iniciarTest(){
 
 function mezclar(arr){ arr.sort(() => Math.random() - 0.5); }
 
-// 4. DINÁMICA DEL TEST
+// 5. DINÁMICA DEL TEST (NOTA BASE 10 + CONTADORES)
 function mostrarPregunta(){
     const q = preguntas[indice];
     respondida = false;
@@ -162,12 +173,11 @@ function mostrarPregunta(){
         <div style="font-size:14px; margin-bottom:10px; text-align:center;">
             ${indice + 1}/${preguntas.length} | ✅ ${aciertos} | ❌ ${fallos} | NOTA: ${nota}
         </div>
-        <div style="text-align:center; font-size:18px;">${q.pregunta}</div>
-    `;
+        <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>`;
 
     let html = "";
-    [{l:"a",t:q.a},{l:"b",t:q.b},{l:"c",t:q.c},{l:"d",t:q.d}].filter(o=>o.t!=="").forEach(o=>{
-        html += `<button id="btn-${o.l}" onclick="responder('${o.l}')" style="width:100%; margin:8px 0; padding:18px; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
+    [{l:"a",t:q.a},{l:"b",t:q.b},{l:"c",t:q.c},{l:"d",t:q.d}].filter(o=>o.t).forEach(o=>{
+        html += `<button id="btn-${o.l}" onclick="responder('${o.l}')" style="width:100%; margin:8px 0; padding:18px; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; text-align:left; display:flex; justify-content:space-between; align-items:center;">
             <span>${o.t}</span><span id="icon-${o.l}"></span></button>`;
     });
     document.getElementById("opciones").innerHTML = html;
@@ -175,12 +185,11 @@ function mostrarPregunta(){
     document.getElementById("contenedor-controles").innerHTML = `
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button onclick="anterior()" style="flex:1;">⬅️</button>
-            <button id="btn-fav" onclick="toggleFavoritoCloud()" style="flex:1; background:#4a4a4a;">⭐</button>
-            <button id="btn-extra" onclick="alert('${q.extra || 'Cap info'}')" disabled style="flex:1;">🔍</button>
-            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black;">Següent ➡️</button>
-        </div>
-    `;
-    actualizarEstadoBotonFav();
+            <button id="btn-fav" onclick="toggleFavoritoCloud()" style="flex:2; background:#4a4a4a;">⭐ Guardar</button>
+            <button id="btn-extra" onclick="alert('${q.extra || 'Sense info'}')" disabled style="flex:1;">🔍</button>
+            <button onclick="siguiente()" style="flex:2; background:#ff9800; color:black;">Següent ➡️</button>
+        </div>`;
+    actualizarBotonFav();
 }
 
 function responder(resp){
@@ -194,37 +203,37 @@ function responder(resp){
     document.getElementById("btn-extra").disabled = false;
 }
 
-// 5. FAVORITOS CLOUD (ESTABLE)
+// 6. FAVORITOS CLOUD (ESTABLE Y RÁPIDO)
 async function toggleFavoritoCloud(){
     const q = preguntas[indice];
     const btn = document.getElementById("btn-fav");
     const existe = favoritosCloud.some(f => f.pregunta === q.pregunta);
     const action = existe ? "remove" : "add";
     
-    btn.innerText = "⏳";
-    btn.disabled = true;
+    btn.innerText = "⏳"; btn.disabled = true;
 
     try {
-        // Usamos una petición simple sin cabeceras complejas para evitar bloqueos
-        await fetch(URL_APPS_SCRIPT, {
+        fetch(URL_APPS_SCRIPT, {
             method: "POST",
             mode: "no-cors",
             body: JSON.stringify({ action: action, pregunta: q })
         });
         
-        setTimeout(async () => {
-            await cargarFavoritosDesdeCloud();
-            actualizarEstadoBotonFav();
+        // Actualizamos localmente para respuesta instantánea
+        if (action === "add") favoritosCloud.push(q);
+        else favoritosCloud = favoritosCloud.filter(f => f.pregunta !== q.pregunta);
+        
+        setTimeout(() => {
+            actualizarBotonFav();
+            document.getElementById("count-favs").innerText = favoritosCloud.length;
             btn.disabled = false;
-        }, 1200);
-    } catch (e) {
-        btn.disabled = false;
-    }
+        }, 1000);
+    } catch (e) { btn.disabled = false; }
 }
 
-function actualizarEstadoBotonFav(){
+function actualizarBotonFav(){
     const btn = document.getElementById("btn-fav");
-    if(!btn) return;
+    if(!btn || !preguntas[indice]) return;
     const existe = favoritosCloud.some(f => f.pregunta === preguntas[indice].pregunta);
     btn.innerText = existe ? "⭐ Treure" : "⭐ Guardar";
     btn.style.border = existe ? "2px solid #ffcc00" : "none";
@@ -232,18 +241,17 @@ function actualizarEstadoBotonFav(){
 
 function anterior(){ if(indice > 0){ indice--; mostrarPregunta(); } }
 function siguiente(){
-    if(!respondida){ alert("Respon primer"); return; }
+    if(!respondida) return alert("Respon primer");
     indice++;
     if(indice >= preguntas.length) final();
     else mostrarPregunta();
 }
 
 function final(){
+    const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
-    const notaNum = ((aciertos - (fallos * 0.25)) / preguntas.length) * 10;
-    const nota = Math.max(0, notaNum).toFixed(2).replace(".",",");
-    document.getElementById("resultado").innerHTML = `<h2>Resultat: ${nota}</h2><p>✅ ${aciertos} | ❌ ${fallos}</p>`;
+    document.getElementById("resultado").innerHTML = `<h2>Resultat: ${nota}</h2><p>✅ ${aciertos} | ❌ ${fallos}</p><button onclick="location.reload()" class="btn-check">Tornar</button>`;
 }
 
 window.onload = () => { generarChecks(); };
