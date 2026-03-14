@@ -251,25 +251,29 @@ async function toggleFavoritoCloud(){
     const existe = favoritosCloud.some(f => f.pregunta === q.pregunta);
     const action = existe ? "remove" : "add";
     
-    btn.innerText = "⏳...";
+    // Feedback visual inmediato
+    btn.innerText = "⏳ Connectant...";
     btn.disabled = true;
 
     try {
+        // Usamos la API de formularios nativa para evitar bloqueos de seguridad del PC
         await fetch(URL_APPS_SCRIPT, {
             method: "POST",
-            mode: "no-cors", // Necesario para evitar bloqueos CORS en Apps Script
+            mode: "no-cors", 
+            headers: { "Content-Type": "text/plain" }, // Engañamos al navegador para que no salte el CORS
             body: JSON.stringify({ action: action, pregunta: q })
         });
         
-        // Pequeña pausa para que a Google le dé tiempo a escribir antes de recargar
+        // Esperamos un poco más para que Google procese la escritura antes de refrescar
         setTimeout(async () => {
             await cargarFavoritosDesdeCloud();
             actualizarEstadoBotonFav();
             btn.disabled = false;
-        }, 1000);
+        }, 1500);
 
     } catch (e) {
-        alert("Error de connexió");
+        console.error("Error:", e);
+        alert("Error de connexió al guardar");
         btn.disabled = false;
     }
 }
