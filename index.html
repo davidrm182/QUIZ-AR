@@ -79,6 +79,12 @@
             color: #1a1a1a !important;
         }
 
+        .btn-fav {
+            background: #4a4a4a !important;
+            color: white !important;
+            margin-top: 10px;
+        }
+
         .btn-mini {
             width: auto;
             display: inline-block;
@@ -105,30 +111,10 @@
             transform: scale(1.2);
         }
 
-        #timer {
-            font-size: 32px;
-            font-weight: bold;
-            color: var(--accent);
-            text-align: center;
-            font-family: monospace;
-            margin-bottom: 15px;
-        }
-
-        /* Estilos específicos para la lista de respuestas */
         #opciones {
             display: flex;
             flex-direction: column;
             gap: 10px;
-        }
-
-        #opciones button {
-            text-align: left;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            font-size: 15px;
-            line-height: 1.4;
         }
 
         hr {
@@ -154,6 +140,9 @@
         <div id="pantalla-inicio" class="card">
             <h1>opos agent rural</h1>
 
+            <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn-fav">⭐ Fer test de preferides (<span id="count-favs">0</span>)</button>
+            <hr>
+
             <h3>temari general</h3>
             <div style="text-align: center; margin-bottom: 10px;">
                 <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
@@ -171,13 +160,6 @@
             <hr>
 
             <h3>configuració</h3>
-            <label style="background: transparent; border: none; padding: 0;">Temps de test:</label>
-            <select id="tiempo-test">
-                <option value="0">sense temps</option>
-                <option value="30">30 minuts</option>
-                <option value="60">60 minuts</option>
-            </select>
-
             <label style="background: transparent; border: none; padding: 0;">Número de preguntes:</label>
             <select id="num-preguntas">
                 <option value="10">10 preguntes</option>
@@ -190,11 +172,8 @@
         </div>
 
         <div id="pantalla-quiz" class="card oculto">
-            <div id="timer">∞</div>
             <div id="pregunta" style="margin-bottom:20px;"></div>
-            
             <div id="opciones"></div>
-
             <div id="contenedor-controles"></div>
         </div>
 
