@@ -69,17 +69,25 @@ async function validarPin(){
 
 async function cargarFavoritosDesdeCloud(){
     try {
-        // Añadimos la hora actual para que el PC nunca use una versión guardada
-        const resp = await fetch(URL_APPS_SCRIPT + "?t=" + Date.now());
+        // Quitamos el Date.now() un momento para ver si Chrome se relaja
+        // Usamos una petición ultra-limpia (solo la URL)
+        const resp = await fetch(URL_APPS_SCRIPT);
+        
+        // Google Apps Script a veces devuelve un error de CORS si la respuesta no es perfecta.
+        // Si fetch falla aquí, es que Chrome bloquea el redireccionamiento.
+        if (!resp.ok) throw new Error('Error en red');
+
         const data = await resp.json();
         favoritosCloud = data || [];
+        
         const contador = document.getElementById("count-favs");
         if(contador) contador.innerText = favoritosCloud.length;
     } catch (e) {
         console.error("Error sincronizando favoritos:", e);
+        // Si falla el fetch por CORS, intentamos una segunda vía más simple:
+        document.getElementById("count-favs").innerText = "?";
     }
 }
-
 // 3. GENERACIÓN DE INTERFAZ
 function generarChecks(){
     const gen = document.getElementById("lista-general");
