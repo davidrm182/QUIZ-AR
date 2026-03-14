@@ -78,19 +78,26 @@ async function validarPin(){
 // 2. Aseguramos que cargarFavoritosDesdeCloud actualice el número en el HTML
 async function cargarFavoritosDesdeCloud(){
     try {
-        // Añadimos un parámetro aleatorio al final de la URL para evitar que el PC use "memoria caché" antigua
-        const cacheBuster = URL_APPS_SCRIPT + "?t=" + new Date().getTime();
-        const res = await fetch(cacheBuster);
+        // Usamos una combinación de técnicas para saltar cualquier bloqueo de caché
+        const urlFinal = URL_APPS_SCRIPT + "?nocache=" + Math.random(); 
+        
+        const res = await fetch(urlFinal, {
+            method: 'GET',
+            cache: 'no-store', // Orden directa al navegador de NO guardar esto
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
         favoritosCloud = await res.json();
         
-        // Actualizamos el número en el botón de la pantalla de inicio
         const contadorLabel = document.getElementById("count-favs");
         if(contadorLabel) {
             contadorLabel.innerText = favoritosCloud.length;
         }
-        console.log("Favoritos sincronizados:", favoritosCloud.length);
     } catch (e) {
-        console.error("Error sincronitzant preferides:", e);
+        console.error("Error en la sincronització:", e);
     }
 }
 
