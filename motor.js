@@ -1,6 +1,6 @@
 const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
 // --- PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ---
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzVmtjL15f6mPHuL7kiIOayoEGoKpCdVg4pbdrCdlB9polhaAvFZhPLbvcJXG2x5sCjww/exec"; 
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbymXsfKvSVAJtCtwfJYhZR_5LIgzbIdZCN4TvZsPx3TDVfccIcllsS-Jk_9qvwnBNkpYQ/exec"; 
 const PIN_CORRECTO = "1989";
 
 let preguntas = [];
@@ -67,26 +67,37 @@ async function validarPin(){
     }
 }
 
-async function cargarFavoritosDesdeCloud(){
-    try {
-        // Quitamos el Date.now() un momento para ver si Chrome se relaja
-        // Usamos una petición ultra-limpia (solo la URL)
-        const resp = await fetch(URL_APPS_SCRIPT);
+function cargarFavoritosDesdeCloud() {
+    return new Promise((resolve) => {
+        // Creamos un nombre de función temporal
+        const nombreFuncionCallback = 'callback_google_' + Math.floor(Math.random() * 1000000);
         
-        // Google Apps Script a veces devuelve un error de CORS si la respuesta no es perfecta.
-        // Si fetch falla aquí, es que Chrome bloquea el redireccionamiento.
-        if (!resp.ok) throw new Error('Error en red');
+        // Esta función recibirá los datos de Google
+        window[nombreFuncionCallback] = function(data) {
+            favoritosCloud = data || [];
+            const contador = document.getElementById("count-favs");
+            if (contador) contador.innerText = favoritosCloud.length;
+            
+            // Limpiamos
+            delete window[nombreFuncionCallback];
+            document.getElementById('temp-script-google')?.remove();
+            resolve();
+        };
 
-        const data = await resp.json();
-        favoritosCloud = data || [];
+        // Creamos una "etiqueta de script" para saltar el CORS
+        const script = document.createElement('script');
+        script.id = 'temp-script-google';
+        script.src = URL_APPS_SCRIPT + "?callback=" + nombreFuncionCallback + "&t=" + Date.now();
         
-        const contador = document.getElementById("count-favs");
-        if(contador) contador.innerText = favoritosCloud.length;
-    } catch (e) {
-        console.error("Error sincronizando favoritos:", e);
-        // Si falla el fetch por CORS, intentamos una segunda vía más simple:
-        document.getElementById("count-favs").innerText = "?";
-    }
+        // Si hay error (bloqueo total), resolvemos para que al menos pueda entrar
+        script.onerror = () => {
+            console.error("Error crítico de carga");
+            document.getElementById("count-favs").innerText = "!";
+            resolve();
+        };
+
+        document.body.appendChild(script);
+    });
 }
 // 3. GENERACIÓN DE INTERFAZ
 function generarChecks(){
