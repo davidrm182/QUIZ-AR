@@ -1,5 +1,5 @@
 const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
-// --- PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ---
+// --- ASEGÚRATE DE QUE ESTA URL SEA LA DE TU "IMPLEMENTACIÓN" ---
 const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwADCAbaIihaToLRkOwfUTvVsNHmdyGY5uDcwQKRlP-pTvd1Hc1kNPDXlJLXK23xHj4Iw/exec"; 
 const PIN_CORRECTO = "1989";
 
@@ -10,7 +10,6 @@ let aciertos = 0;
 let fallos = 0;
 let respondida = false;
 
-// 1. LISTADO DE TEMAS COMPLETO (Sin recortes)
 const TEMAS_GENERAL = [
     {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
     {id:"tg2",nombre:"2. Organització Administració catalana"},
@@ -48,56 +47,34 @@ function getNombreTema(id){
     return t ? t.nombre : id;
 }
 
-// 1. Modificamos validarPin para que ESPERE a la nube
+// 1. LOGIN CON SINCRONIZACIÓN CORREGIDA
 async function validarPin(){
     const input = document.getElementById("pin-input").value;
-    const error = document.getElementById("error-pin");
-    const btnEntrar = document.querySelector("button[onclick='validarPin()']");
-
+    const btn = document.querySelector("button[onclick='validarPin()']");
     if(input === PIN_CORRECTO){
-        // Feedback visual mientras carga
-        btnEntrar.innerText = "Sincronitzant...";
-        btnEntrar.disabled = true;
-
-        // ESPERAMOS a que carguen las favoritas de la nube
+        btn.innerText = "Sincronitzant...";
+        btn.disabled = true;
+        
         await cargarFavoritosDesdeCloud();
 
         document.getElementById("pantalla-bloqueo").classList.add("oculto");
         document.getElementById("contingut-protegit").classList.remove("oculto");
-        
         generarChecks();
-        
-        // Restauramos el botón por si acaso cerramos sesión
-        btnEntrar.innerText = "entrar";
-        btnEntrar.disabled = false;
-    } else {
-        error.classList.remove("oculto");
+    }else{
+        document.getElementById("error-pin").classList.remove("oculto");
     }
 }
 
-// 2. Aseguramos que cargarFavoritosDesdeCloud actualice el número en el HTML
+// 2. CARGA DESDE LA NUBE (Simplificada para evitar errores de red)
 async function cargarFavoritosDesdeCloud(){
     try {
-        // Usamos una combinación de técnicas para saltar cualquier bloqueo de caché
-        const urlFinal = URL_APPS_SCRIPT + "?nocache=" + Math.random(); 
-        
-        const res = await fetch(urlFinal, {
-            method: 'GET',
-            cache: 'no-store', // Orden directa al navegador de NO guardar esto
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-        
-        favoritosCloud = await res.json();
-        
-        const contadorLabel = document.getElementById("count-favs");
-        if(contadorLabel) {
-            contadorLabel.innerText = favoritosCloud.length;
-        }
+        const res = await fetch(URL_APPS_SCRIPT);
+        const data = await res.json();
+        favoritosCloud = data || [];
+        const contador = document.getElementById("count-favs");
+        if(contador) contador.innerText = favoritosCloud.length;
     } catch (e) {
-        console.error("Error en la sincronització:", e);
+        console.error("Error favoritos:", e);
     }
 }
 
@@ -106,83 +83,59 @@ function generarChecks(){
     const esp = document.getElementById("lista-especifico");
     if(!gen || !esp) return;
     gen.innerHTML = ""; esp.innerHTML = "";
-    TEMAS_GENERAL.forEach(t=>{
-        gen.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}">${t.nombre}</label>`;
-    });
-    TEMAS_ESPECIFICO.forEach(t=>{
-        esp.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}">${t.nombre}</label>`;
-    });
+    TEMAS_GENERAL.forEach(t=> gen.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}">${t.nombre}</label>`);
+    TEMAS_ESPECIFICO.forEach(t=> esp.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}">${t.nombre}</label>`);
 }
 
 function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-// 3. CARGA DE DATOS (Mejora: Fila 2)
+// 3. CARGA DE PREGUNTAS (ROBUSTA)
 async function cargarPreguntas(temaId){
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}`;
     try {
         const res = await fetch(url);
         const text = await res.text();
-        const inicio = text.indexOf('{');
-        const fin = text.lastIndexOf('}');
-        const jsonText = text.substring(inicio, fin + 1);
+        const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
         const json = JSON.parse(jsonText);
-        
-        // Saltamos la fila 1 (cabeceras)
         const rows = json.table.rows.slice(1);
         
-        return rows
-            .filter(r => r.c && r.c[0] && r.c[0].v !== null)
-            .map(r => ({
-                tema: getNombreTema(temaId),
-                pregunta: r.c[0]?.v || "",
-                a: r.c[1]?.v || "",
-                b: r.c[2]?.v || "",
-                c: r.c[3]?.v || "",
-                d: r.c[4]?.v || "",
-                correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
-                extra: r.c[6]?.v || ""
-            }));
-    } catch (e) {
-        return [];
-    }
+        return rows.filter(r => r.c && r.c[0] && r.c[0].v !== null).map(r => ({
+            tema: getNombreTema(temaId),
+            pregunta: r.c[0]?.v || "",
+            a: r.c[1]?.v || "",
+            b: r.c[2]?.v || "",
+            c: r.c[3]?.v || "",
+            d: r.c[4]?.v || "",
+            correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
+            extra: r.c[6]?.v || ""
+        }));
+    } catch (e) { return []; }
 }
 
-// 4. PREPARACIÓN DEL QUIZ
 async function prepararQuiz(){
-    const checks = document.querySelectorAll(".tema-check:checked");
-    const temasSeleccionados = [...checks].map(t=>t.value);
-    
-    if(temasSeleccionados.length === 0){ alert("Selecciona almenys un tema"); return; }
+    const temas = [...document.querySelectorAll(".tema-check:checked")].map(t=>t.value);
+    if(temas.length === 0){ alert("Tria temes"); return; }
     
     const btn = document.querySelector("button[onclick='prepararQuiz()']");
-    const originalText = btn.innerText;
-    btn.innerText = "Carregant dades...";
-    btn.disabled = true;
+    btn.innerText = "Carregant..."; btn.disabled = true;
 
     preguntas = [];
-    for(let id of temasSeleccionados){
+    for(let id of temas) {
         const lista = await cargarPreguntas(id);
         preguntas = preguntas.concat(lista);
     }
-
-    if(preguntas.length === 0){ 
-        alert("Error de càrrega"); 
-        btn.innerText = originalText;
-        btn.disabled = false;
-        return; 
-    }
-
-    mezclar(preguntas);
-    const cantidad = parseInt(document.getElementById("num-preguntas").value);
-    preguntas = preguntas.slice(0, cantidad);
     
+    if(preguntas.length === 0){ alert("Error"); location.reload(); return; }
+    
+    mezclar(preguntas);
+    preguntas = preguntas.slice(0, parseInt(document.getElementById("num-preguntas").value));
     iniciarTest();
 }
 
-async function prepararQuizFavs(){
-    if(favoritosCloud.length === 0){ alert("No tens preguntes guardades a la núvol"); return; }
+function prepararQuizFavs(){
+    if(favoritosCloud.length === 0){ alert("No hi ha preferides"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
     iniciarTest();
@@ -195,52 +148,36 @@ function iniciarTest(){
     mostrarPregunta();
 }
 
-function mezclar(array){
-    for(let i=array.length-1;i>0;i--){
-        const j=Math.floor(Math.random()*(i+1));
-        [array[i],array[j]]=[array[j],array[i]];
-    }
-}
+function mezclar(arr){ arr.sort(() => Math.random() - 0.5); }
 
-// 5. DINÁMICA DEL TEST (Nota Base 10 + Contadores)
+// 4. DINÁMICA DEL TEST
 function mostrarPregunta(){
     const q = preguntas[indice];
     respondida = false;
-    
-    // Nota Base 10
     const notaNum = ((aciertos - (fallos * 0.25)) / preguntas.length) * 10;
     const nota = Math.max(0, notaNum).toFixed(2).replace(".",",");
     
     document.getElementById("pregunta").innerHTML = `
-        <div style="font-size:12px; color:#ffcc00; margin-bottom:5px; text-align:center; opacity:0.8;">${q.tema}</div>
-        <div style="font-size:14px; margin-bottom:15px; text-align:center; letter-spacing:1px;">
-            PREGUNTA ${indice + 1}/${preguntas.length} | <span style="color:#4CAF50">✅ ${aciertos}</span> | <span style="color:#f44336">❌ ${fallos}</span> | NOTA: ${nota}
+        <div style="font-size:12px; color:#ffcc00; text-align:center;">${q.tema}</div>
+        <div style="font-size:14px; margin-bottom:10px; text-align:center;">
+            ${indice + 1}/${preguntas.length} | ✅ ${aciertos} | ❌ ${fallos} | NOTA: ${nota}
         </div>
-        <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>
+        <div style="text-align:center; font-size:18px;">${q.pregunta}</div>
     `;
 
-    let opciones = [
-        {letra:"a", texto:q.a}, {letra:"b", texto:q.b},
-        {letra:"c", texto:q.c}, {letra:"d", texto:q.d}
-    ].filter(o => o.texto !== "");
-
     let html = "";
-    opciones.forEach(o=>{
-        html += `
-            <button id="btn-${o.letra}" onclick="responder('${o.letra}')" 
-                style="width:100%; margin:8px 0; padding:18px; font-size:15px; text-align:left; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
-                <span style="max-width:85%">${o.texto}</span>
-                <span id="icon-${o.letra}" style="font-size:20px;"></span>
-            </button>`;
+    [{l:"a",t:q.a},{l:"b",t:q.b},{l:"c",t:q.c},{l:"d",t:q.d}].filter(o=>o.t!=="").forEach(o=>{
+        html += `<button id="btn-${o.l}" onclick="responder('${o.l}')" style="width:100%; margin:8px 0; padding:18px; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; display:flex; justify-content:space-between; align-items:center;">
+            <span>${o.t}</span><span id="icon-${o.l}"></span></button>`;
     });
     document.getElementById("opciones").innerHTML = html;
 
     document.getElementById("contenedor-controles").innerHTML = `
-        <div style="display:flex; justify-content:space-between; gap:12px; margin-top:25px;">
-            <button onclick="anterior()" style="flex:1; background:#5d4037; padding:14px; border-radius:10px;">⬅️</button>
-            <button id="btn-fav" onclick="toggleFavoritoCloud()" style="flex:1; background:#4a4a4a; padding:14px; border-radius:10px;">⭐ Guardar</button>
-            <button id="btn-extra" onclick="mostrarExtra()" disabled style="flex:1; background:#5d4037; padding:14px; border-radius:10px;">🔍 Info</button>
-            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black; padding:14px; border-radius:10px;">Següent ➡️</button>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="anterior()" style="flex:1;">⬅️</button>
+            <button id="btn-fav" onclick="toggleFavoritoCloud()" style="flex:1; background:#4a4a4a;">⭐</button>
+            <button id="btn-extra" onclick="alert('${q.extra || 'Cap info'}')" disabled style="flex:1;">🔍</button>
+            <button onclick="siguiente()" style="flex:1; background:#ff9800; color:black;">Següent ➡️</button>
         </div>
     `;
     actualizarEstadoBotonFav();
@@ -250,57 +187,37 @@ function responder(resp){
     if(respondida) return;
     respondida = true;
     const q = preguntas[indice];
-    const correcta = q.correcta;
-    
-    const btnElegido = document.getElementById(`btn-${resp}`);
-    const btnCorrecto = document.getElementById(`btn-${correcta}`);
-
-    if(resp === correcta){ 
-        aciertos++; 
-        btnElegido.style.backgroundColor = "#2e7d32";
-        document.getElementById(`icon-${resp}`).innerHTML = "✅";
-    } else {
-        fallos++;
-        btnElegido.style.backgroundColor = "#c62828";
-        document.getElementById(`icon-${resp}`).innerHTML = "❌";
-        if(btnCorrecto) {
-            btnCorrecto.style.backgroundColor = "#2e7d32";
-            document.getElementById(`icon-${correcta}`).innerHTML = "✅";
-        }
-    }
+    const bE = document.getElementById(`btn-${resp}`);
+    const bC = document.getElementById(`btn-${q.correcta}`);
+    if(resp === q.correcta){ aciertos++; bE.style.background = "#2e7d32"; }
+    else { fallos++; bE.style.background = "#c62828"; if(bC) bC.style.background = "#2e7d32"; }
     document.getElementById("btn-extra").disabled = false;
 }
 
-// 6. FAVORITOS EN LA NUBE (Sincronizados)
+// 5. FAVORITOS CLOUD (ESTABLE)
 async function toggleFavoritoCloud(){
     const q = preguntas[indice];
     const btn = document.getElementById("btn-fav");
     const existe = favoritosCloud.some(f => f.pregunta === q.pregunta);
     const action = existe ? "remove" : "add";
     
-    // Feedback visual inmediato
-    btn.innerText = "⏳ Connectant...";
+    btn.innerText = "⏳";
     btn.disabled = true;
 
     try {
-        // Usamos la API de formularios nativa para evitar bloqueos de seguridad del PC
+        // Usamos una petición simple sin cabeceras complejas para evitar bloqueos
         await fetch(URL_APPS_SCRIPT, {
             method: "POST",
-            mode: "no-cors", 
-            headers: { "Content-Type": "text/plain" }, // Engañamos al navegador para que no salte el CORS
+            mode: "no-cors",
             body: JSON.stringify({ action: action, pregunta: q })
         });
         
-        // Esperamos un poco más para que Google procese la escritura antes de refrescar
         setTimeout(async () => {
             await cargarFavoritosDesdeCloud();
             actualizarEstadoBotonFav();
             btn.disabled = false;
-        }, 1500);
-
+        }, 1200);
     } catch (e) {
-        console.error("Error:", e);
-        alert("Error de connexió al guardar");
         btn.disabled = false;
     }
 }
@@ -313,16 +230,9 @@ function actualizarEstadoBotonFav(){
     btn.style.border = existe ? "2px solid #ffcc00" : "none";
 }
 
-function mostrarExtra(){
-    alert(preguntas[indice].extra || "No hi ha informació addicional.");
-}
-
-function anterior(){
-    if(indice > 0) { indice--; mostrarPregunta(); }
-}
-
+function anterior(){ if(indice > 0){ indice--; mostrarPregunta(); } }
 function siguiente(){
-    if(!respondida){ alert("Respon la pregunta primer."); return; }
+    if(!respondida){ alert("Respon primer"); return; }
     indice++;
     if(indice >= preguntas.length) final();
     else mostrarPregunta();
@@ -333,16 +243,7 @@ function final(){
     document.getElementById("pantalla-final").classList.remove("oculto");
     const notaNum = ((aciertos - (fallos * 0.25)) / preguntas.length) * 10;
     const nota = Math.max(0, notaNum).toFixed(2).replace(".",",");
-    document.getElementById("resultado").innerHTML = `
-        <h2 style="color:#ff9800; font-size:28px;">Resultats</h2>
-        <div style="font-size:18px; line-height:2; margin:20px 0;">
-            ✅ Encerts: <span style="color:#4CAF50">${aciertos}</span><br>
-            ❌ Errors: <span style="color:#f44336">${fallos}</span><br><br>
-            <div style="background:#3e3123; padding:25px; border-radius:15px; border:2px solid #ff9800;">
-                <span style="font-size:14px; text-transform:uppercase; opacity:0.7;">Nota Final (Base 10)</span><br>
-                <span style="font-size:45px; font-weight:bold; color:#ff9800;">${nota}</span>
-            </div>
-        </div>`;
+    document.getElementById("resultado").innerHTML = `<h2>Resultat: ${nota}</h2><p>✅ ${aciertos} | ❌ ${fallos}</p>`;
 }
 
 window.onload = () => { generarChecks(); };
