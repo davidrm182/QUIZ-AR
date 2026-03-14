@@ -1,6 +1,6 @@
 const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
 // --- PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ---
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwADCAbaIihaToLRkOwfUTvVsNHmdyGY5uDcwQKRlP-pTvd1Hc1kNPDXlJLXK23xHj4Iw/exec"; 
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzVmtjL15f6mPHuL7kiIOayoEGoKpCdVg4pbdrCdlB9polhaAvFZhPLbvcJXG2x5sCjww/exec"; 
 const PIN_CORRECTO = "1989";
 
 let preguntas = [];
