@@ -48,27 +48,47 @@ function getNombreTema(id){
     return t ? t.nombre : id;
 }
 
-// 2. INICIO, LOGIN Y SINCRONIZACIÓN
+// 1. Modificamos validarPin para que ESPERE a la nube
 async function validarPin(){
     const input = document.getElementById("pin-input").value;
     const error = document.getElementById("error-pin");
+    const btnEntrar = document.querySelector("button[onclick='validarPin()']");
+
     if(input === PIN_CORRECTO){
+        // Feedback visual mientras carga
+        btnEntrar.innerText = "Sincronitzant...";
+        btnEntrar.disabled = true;
+
+        // ESPERAMOS a que carguen las favoritas de la nube
+        await cargarFavoritosDesdeCloud();
+
         document.getElementById("pantalla-bloqueo").classList.add("oculto");
         document.getElementById("contingut-protegit").classList.remove("oculto");
+        
         generarChecks();
-        // Al entrar, descargamos las favoritas de la nube
-        await cargarFavoritosDesdeCloud();
-    }else{
+        
+        // Restauramos el botón por si acaso cerramos sesión
+        btnEntrar.innerText = "entrar";
+        btnEntrar.disabled = false;
+    } else {
         error.classList.remove("oculto");
     }
 }
 
+// 2. Aseguramos que cargarFavoritosDesdeCloud actualice el número en el HTML
 async function cargarFavoritosDesdeCloud(){
     try {
-        const res = await fetch(URL_APPS_SCRIPT);
+        // Añadimos un parámetro aleatorio al final de la URL para evitar que el PC use "memoria caché" antigua
+        const cacheBuster = URL_APPS_SCRIPT + "?t=" + new Date().getTime();
+        const res = await fetch(cacheBuster);
         favoritosCloud = await res.json();
-        const contador = document.getElementById("count-favs");
-        if(contador) contador.innerText = favoritosCloud.length;
+        
+        // Actualizamos el número en el botón de la pantalla de inicio
+        const contadorLabel = document.getElementById("count-favs");
+        if(contadorLabel) {
+            contadorLabel.innerText = favoritosCloud.length;
+        }
+        console.log("Favoritos sincronizados:", favoritosCloud.length);
     } catch (e) {
         console.error("Error sincronitzant preferides:", e);
     }
