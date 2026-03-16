@@ -114,33 +114,38 @@ function seleccionar(estado,clase){
 
 // 4. CARGA DE PREGUNTAS (DESDE GOOGLE SHEETS)
 async function cargarPreguntas(temaId){
-    // Usamos la URL con Date.now para evitar que Chrome use datos viejos
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}&t=` + Date.now();
+    // Cambiamos tqx=out:json por tqx=out:csv y luego lo procesamos manualmente 
+    // o forzamos el formato de tabla completa.
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${temaId}&t=` + Date.now();
+    
     try {
         const res = await fetch(url);
         const text = await res.text();
-        // Limpiamos el JSON que devuelve Google
         const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
         const json = JSON.parse(jsonText);
         
-        // Cogemos todas las filas saltando la cabecera (fila 1)
-        const rows = json.table.rows.slice(1);
+        // Google a veces pagina los resultados. Asegurémonos de leer lo que hay en table.rows
+        const rows = json.table.rows; 
         
-        return rows
-            .filter(r => {
-                // Filtro mejorado: Comprobamos que la fila exista y que la celda de la pregunta (c[0]) tenga algo de valor
-                return r && r.c && r.c[0] && (r.c[0].v !== null && r.c[0].v !== undefined && r.c[0].v.toString().trim() !== "");
+        // Quitamos la primera fila si es la cabecera (comprobando si es "Pregunta" o similar)
+        const startIdx = (rows[0] && rows[0].c && rows[0].c[0] && rows[0].c[0].v === "Pregunta") ? 1 : 0;
+        const dataRows = rows.slice(startIdx);
+
+        return dataRows
+            .map(r => {
+                if (!r || !r.c) return null;
+                return {
+                    tema: getNombreTema(temaId),
+                    pregunta: r.c[0] ? String(r.c[0].v || "") : "",
+                    a: r.c[1] ? String(r.c[1].v || "") : "",
+                    b: r.c[2] ? String(r.c[2].v || "") : "",
+                    c: r.c[3] ? String(r.c[3].v || "") : "",
+                    d: r.c[4] ? String(r.c[4].v || "") : "",
+                    correcta: r.c[5] ? String(r.c[5].v || "").toLowerCase().trim() : "",
+                    extra: r.c[6] ? String(r.c[6].v || "") : ""
+                };
             })
-            .map(r => ({
-                tema: getNombreTema(temaId),
-                pregunta: r.c[0]?.v || "",
-                a: r.c[1]?.v || "",
-                b: r.c[2]?.v || "",
-                c: r.c[3]?.v || "",
-                d: r.c[4]?.v || "",
-                correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
-                extra: r.c[6]?.v || ""
-            }));
+            .filter(q => q && q.pregunta.length > 2); // Filtro: que la pregunta tenga texto real
     } catch (e) { 
         console.error("Error cargando tema " + temaId, e);
         return []; 
