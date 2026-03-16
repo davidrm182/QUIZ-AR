@@ -114,16 +114,23 @@ function seleccionar(estado,clase){
 
 // 4. CARGA DE PREGUNTAS (DESDE GOOGLE SHEETS)
 async function cargarPreguntas(temaId){
+    // Usamos la URL con Date.now para evitar que Chrome use datos viejos
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${temaId}&t=` + Date.now();
     try {
         const res = await fetch(url);
         const text = await res.text();
+        // Limpiamos el JSON que devuelve Google
         const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
         const json = JSON.parse(jsonText);
+        
+        // Cogemos todas las filas saltando la cabecera (fila 1)
         const rows = json.table.rows.slice(1);
         
         return rows
-            .filter(r => r.c && r.c[0] && r.c[0].v !== null)
+            .filter(r => {
+                // Filtro mejorado: Comprobamos que la fila exista y que la celda de la pregunta (c[0]) tenga algo de valor
+                return r && r.c && r.c[0] && (r.c[0].v !== null && r.c[0].v !== undefined && r.c[0].v.toString().trim() !== "");
+            })
             .map(r => ({
                 tema: getNombreTema(temaId),
                 pregunta: r.c[0]?.v || "",
@@ -134,9 +141,11 @@ async function cargarPreguntas(temaId){
                 correcta: (r.c[5]?.v || "").toString().toLowerCase().trim(),
                 extra: r.c[6]?.v || ""
             }));
-    } catch (e) { return []; }
+    } catch (e) { 
+        console.error("Error cargando tema " + temaId, e);
+        return []; 
+    }
 }
-
 async function prepararQuiz(){
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
