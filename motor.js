@@ -8,7 +8,7 @@ let indice = 0;
 let aciertos = 0;
 let fallos = 0;
 let respondida = false;
-let respuestaCorrectaActual = ""; // Para el nuevo sistema de respuestas mezcladas
+let respuestaCorrectaActual = ""; 
 
 // 1. LISTADO DE TEMAS COMPLETO
 const TEMAS_GENERAL = [
@@ -48,7 +48,7 @@ function getNombreTema(id){
     return t ? t.nombre : id;
 }
 
-// 2. LOGIN Y CARGA DE FAVORITOS (JSONP)
+// 2. LOGIN Y CARGA DE FAVORITOS
 async function validarPin(){
     const input = document.getElementById("pin-input").value;
     const btn = document.querySelector("button[onclick='validarPin()']");
@@ -101,7 +101,7 @@ function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-// 4. CARGA DE PREGUNTAS (SISTEMA ROBUSTO TEXTO)
+// 4. CARGA DE PREGUNTAS (SISTEMA ROBUSTO)
 async function cargarPreguntas(temaId){
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${temaId}&t=` + Date.now();
     try {
@@ -147,7 +147,7 @@ async function prepararQuiz(){
     
     if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
     
-    mezclar(preguntas); // Mezcla aleatoria real
+    mezclar(preguntas);
     const cantidad = parseInt(document.getElementById("num-preguntas").value);
     preguntas = preguntas.slice(0, cantidad);
     iniciarTest();
@@ -175,7 +175,7 @@ function mezclar(arr) {
     }
 }
 
-// 5. DINÁMICA DEL TEST CON RESPUESTAS MEZCLADAS
+// 5. DINÁMICA DEL TEST CON COMPARACIÓN EXACTA
 function obtenerRespuestasMezcladas(q) {
     let opciones = [
         { texto: q.a, id: 'a' },
@@ -207,8 +207,9 @@ function mostrarPregunta(){
 
     let html = "";
     opciones.forEach((o, i) => {
-        html += `<button id="btn-opcion-${i}" onclick="verificarRespuesta('${o.texto.replace(/'/g, "\\'")}', ${i})" style="width:100%; margin:8px 0; padding:18px; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; text-align:left; display:flex; justify-content:space-between; align-items:center;">
-            <span style="max-width:85%">${o.texto}</span><span id="icon-opcion-${i}"></span></button>`;
+        const textoEscapado = o.texto.replace(/'/g, "\\'");
+        html += `<button id="btn-opcion-${i}" onclick="verificarRespuesta('${textoEscapado}', ${i})" style="width:100%; margin:8px 0; padding:18px; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; text-align:left; display:flex; justify-content:space-between; align-items:center;">
+            <span class="texto-opcion" style="max-width:85%">${o.texto}</span><span id="icon-opcion-${i}"></span></button>`;
     });
     document.getElementById("opciones").innerHTML = html;
 
@@ -225,18 +226,23 @@ function mostrarPregunta(){
 function verificarRespuesta(textoSeleccionado, indiceBoton) {
     if (respondida) return;
     respondida = true;
-    const botones = document.getElementById("opciones").getElementsByTagName("button");
+    
+    // Comprobación exacta
     if (textoSeleccionado === respuestaCorrectaActual) {
         aciertos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#2e7d32";
     } else {
         fallos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#c62828";
-        for (let i = 0; i < botones.length; i++) {
-            if (botones[i].innerText.includes(respuestaCorrectaActual)) {
-                botones[i].style.background = "#2e7d32";
+        
+        // Pintamos la correcta buscando coincidencia exacta
+        const botones = document.querySelectorAll("#opciones button");
+        botones.forEach(btn => {
+            const spanTexto = btn.querySelector(".texto-opcion").innerText;
+            if (spanTexto === respuestaCorrectaActual) {
+                btn.style.background = "#2e7d32";
             }
-        }
+        });
     }
     document.getElementById("btn-extra").disabled = false;
 }
