@@ -142,9 +142,14 @@ async function cargarPreguntas(temaId){
     } catch (e) { return []; }
 }
 
-// --- FUNCIÓN MEJORADA: SIMULACROS (Oficial, Light, Ultra) ---
-async function prepararSimulacro(tipo) {
-    // Cambiamos el texto del botón que se haya pulsado y bloqueamos
+// --- FUNCIÓN MEJORADA: SIMULACROS CON FEEDBACK DE CARGA ---
+async function prepararSimulacro(tipo, botonClicado) {
+    // Si sabemos qué botón se ha pulsado, le cambiamos el texto inmediatamente
+    if (botonClicado) {
+        botonClicado.innerText = "⏳ Carregant...";
+    }
+
+    // Deshabilitamos todos los botones del menú para evitar que hagas doble clic sin querer
     const botones = document.querySelectorAll("#pantalla-inicio button");
     botones.forEach(b => b.disabled = true);
 
@@ -156,9 +161,9 @@ async function prepararSimulacro(tipo) {
         
         // Aplicamos las reglas según el tipo de simulacro
         if (tipo === 'light') {
-            cantidad = Math.ceil(cantidadOriginal / 2); // Mitad redondeando hacia arriba
+            cantidad = Math.ceil(cantidadOriginal / 2); 
         } else if (tipo === 'ultra') {
-            cantidad = 1; // Exactamente 1 pregunta por tema
+            cantidad = 1; 
         }
 
         if (cantidad > 0) {
@@ -176,7 +181,6 @@ async function prepararSimulacro(tipo) {
     mezclar(preguntas);
     iniciarTest();
 }
-
 // TEST NORMAL
 async function prepararQuiz(){
     const checks = document.querySelectorAll(".tema-check:checked");
