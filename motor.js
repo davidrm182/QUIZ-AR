@@ -2,6 +2,17 @@ const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
 const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbymXsfKvSVAJtCtwfJYhZR_5LIgzbIdZCN4TvZsPx3TDVfccIcllsS-Jk_9qvwnBNkpYQ/exec"; 
 const PIN_CORRECTO = "1989";
 
+// --- CONFIGURACIÓN DEL SIMULACRO OFICIAL (Editable) ---
+// Aquí puedes cambiar cuántas preguntas coge de cada tema. (Suma total = 80)
+const PESOS_SIMULACRO = {
+    "tg1": 2, "tg2": 3, "tg3": 2, "tg4": 2,
+    "te1": 6, "te2": 5, "te3": 5, "te4": 6, "te5": 6,
+    "te6": 4, "te7": 2, "te8": 2, "te9": 5, "te10": 5,
+    "te11": 2, "te12": 3, "te13": 2, "te14": 2, "te15": 2,
+    "te16": 2, "te17": 4, "te18": 2, "te19": 2, "te20": 2,
+    "te21": 2
+};
+
 let preguntas = [];
 let favoritosCloud = []; 
 let indice = 0;
@@ -131,6 +142,32 @@ async function cargarPreguntas(temaId){
     } catch (e) { return []; }
 }
 
+// --- FUNCIÓN NUEVA: SIMULACRO OFICIAL PONDERADO ---
+async function prepararSimulacro() {
+    const btn = document.getElementById("btn-simulacro");
+    if(btn) { btn.innerText = "Preparant simulacre..."; btn.disabled = true; }
+
+    preguntas = [];
+    
+    // Recorremos el diccionario de pesos
+    for (const [idTema, cantidad] of Object.entries(PESOS_SIMULACRO)) {
+        if (cantidad > 0) {
+            let listaTema = await cargarPreguntas(idTema); // Descargamos el tema
+            if (listaTema.length > 0) {
+                mezclar(listaTema); // Mezclamos las preguntas dentro del tema
+                preguntas = preguntas.concat(listaTema.slice(0, cantidad)); // Cogemos solo la cantidad marcada
+            }
+        }
+    }
+    
+    if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
+    
+    // Mezcla final de las 80 preguntas juntas
+    mezclar(preguntas);
+    iniciarTest();
+}
+
+// TEST NORMAL
 async function prepararQuiz(){
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
