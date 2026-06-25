@@ -142,27 +142,37 @@ async function cargarPreguntas(temaId){
     } catch (e) { return []; }
 }
 
-// --- FUNCIÓN NUEVA: SIMULACRO OFICIAL PONDERADO ---
-async function prepararSimulacro() {
-    const btn = document.getElementById("btn-simulacro");
-    if(btn) { btn.innerText = "Preparant simulacre..."; btn.disabled = true; }
+// --- FUNCIÓN MEJORADA: SIMULACROS (Oficial, Light, Ultra) ---
+async function prepararSimulacro(tipo) {
+    // Cambiamos el texto del botón que se haya pulsado y bloqueamos
+    const botones = document.querySelectorAll("#pantalla-inicio button");
+    botones.forEach(b => b.disabled = true);
 
     preguntas = [];
     
     // Recorremos el diccionario de pesos
-    for (const [idTema, cantidad] of Object.entries(PESOS_SIMULACRO)) {
+    for (const [idTema, cantidadOriginal] of Object.entries(PESOS_SIMULACRO)) {
+        let cantidad = cantidadOriginal;
+        
+        // Aplicamos las reglas según el tipo de simulacro
+        if (tipo === 'light') {
+            cantidad = Math.ceil(cantidadOriginal / 2); // Mitad redondeando hacia arriba
+        } else if (tipo === 'ultra') {
+            cantidad = 1; // Exactamente 1 pregunta por tema
+        }
+
         if (cantidad > 0) {
-            let listaTema = await cargarPreguntas(idTema); // Descargamos el tema
+            let listaTema = await cargarPreguntas(idTema); 
             if (listaTema.length > 0) {
-                mezclar(listaTema); // Mezclamos las preguntas dentro del tema
-                preguntas = preguntas.concat(listaTema.slice(0, cantidad)); // Cogemos solo la cantidad marcada
+                mezclar(listaTema); 
+                preguntas = preguntas.concat(listaTema.slice(0, cantidad)); 
             }
         }
     }
     
     if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
     
-    // Mezcla final de las 80 preguntas juntas
+    // Mezcla final caótica
     mezclar(preguntas);
     iniciarTest();
 }
