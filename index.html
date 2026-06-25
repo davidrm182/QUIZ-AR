@@ -149,6 +149,10 @@
         <div id="pantalla-inicio" class="card">
             <h1>opos agent rural</h1>
 
+            <button id="btn-simulacro" onclick="prepararSimulacro()" class="btn-check" style="background:#d32f2f !important; color:white !important; margin-bottom: 10px;">
+                🎯 Fer Simulacre Oficial (80 preg.)
+            </button>
+
             <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn-fav">⭐ Fer test de preferides (<span id="count-favs">0</span>)</button>
             <hr>
 
@@ -168,7 +172,7 @@
 
             <hr>
 
-            <h3>configuració</h3>
+            <h3>configuració de test ràpid</h3>
             <label style="background: transparent; border: none; padding: 0;">Número de preguntes:</label>
             <select id="num-preguntas">
                 <option value="10">10 preguntes</option>
@@ -177,7 +181,7 @@
                 <option value="80">80 preguntes</option>
             </select>
 
-            <button onclick="prepararQuiz()" class="btn-check">comencem</button>
+            <button onclick="prepararQuiz()" class="btn-check">comencem test ràpid</button>
         </div>
 
         <div id="pantalla-quiz" class="card oculto">
@@ -193,7 +197,7 @@
 
     </div>
 
-    <script src="motor.js?v=2.7"></script>
+    <script src="motor.js?v=2.8"></script>
 </body>
 
 </html>
