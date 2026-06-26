@@ -5,8 +5,8 @@ const PIN_CORRECTO = "1989";
 // --- CONFIGURACIÓN DEL SIMULACRO OFICIAL (Editable) ---
 // Aquí puedes cambiar cuántas preguntas coge de cada tema. (Suma total = 80)
 const PESOS_SIMULACRO = {
-    "tg1": 2, "tg2": 3, "tg3": 2, "tg4": 2,
-    "te1": 6, "te2": 5, "te3": 5, "te4": 6, "te5": 6,
+    "tg1": 2, "tg2": 2, "tg3": 3, "tg4": 2,
+    "te1": 6, "te2": 5, "te3": 5, "te4": 5, "te5": 7,
     "te6": 4, "te7": 2, "te8": 2, "te9": 5, "te10": 5,
     "te11": 2, "te12": 3, "te13": 2, "te14": 2, "te15": 2,
     "te16": 2, "te17": 4, "te18": 2, "te19": 2, "te20": 2,
