@@ -3,7 +3,6 @@ const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbymXsfKvSVAJtCt
 const PIN_CORRECTO = "1989";
 
 // --- CONFIGURACIÓN DEL SIMULACRO OFICIAL (Editable) ---
-// Aquí puedes cambiar cuántas preguntas coge de cada tema. (Suma total = 80)
 const PESOS_SIMULACRO = {
     "tg1": 2, "tg2": 2, "tg3": 3, "tg4": 2,
     "te1": 6, "te2": 5, "te3": 5, "te4": 5, "te5": 7,
@@ -18,8 +17,10 @@ let favoritosCloud = [];
 let indice = 0;
 let aciertos = 0;
 let fallos = 0;
+let blancas = 0; // NUEVO: Contador de blancas
 let respondida = false;
 let respuestaCorrectaActual = ""; 
+let esSimulacroLargo = false; // NUEVO: Bandera para activar modo blancas
 
 // 1. LISTADO DE TEMAS COMPLETO
 const TEMAS_GENERAL = [
@@ -144,22 +145,20 @@ async function cargarPreguntas(temaId){
 
 // --- FUNCIÓN MEJORADA: SIMULACROS CON FEEDBACK DE CARGA ---
 async function prepararSimulacro(tipo, botonClicado) {
-    // Si sabemos qué botón se ha pulsado, le cambiamos el texto inmediatamente
+    esSimulacroLargo = (tipo === 'oficial'); // Detecta si es el oficial
+
     if (botonClicado) {
         botonClicado.innerText = "⏳ Carregant...";
     }
 
-    // Deshabilitamos todos los botones del menú para evitar que hagas doble clic sin querer
     const botones = document.querySelectorAll("#pantalla-inicio button");
     botones.forEach(b => b.disabled = true);
 
     preguntas = [];
     
-    // Recorremos el diccionario de pesos
     for (const [idTema, cantidadOriginal] of Object.entries(PESOS_SIMULACRO)) {
         let cantidad = cantidadOriginal;
         
-        // Aplicamos las reglas según el tipo de simulacro
         if (tipo === 'light') {
             cantidad = Math.ceil(cantidadOriginal / 2); 
         } else if (tipo === 'ultra') {
@@ -177,12 +176,13 @@ async function prepararSimulacro(tipo, botonClicado) {
     
     if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
     
-    // Mezcla final caótica
     mezclar(preguntas);
     iniciarTest();
 }
+
 // TEST NORMAL
 async function prepararQuiz(){
+    esSimulacroLargo = false;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
     if(temasSeleccionados.length === 0){ alert("Tria algun tema"); return; }
@@ -205,6 +205,7 @@ async function prepararQuiz(){
 }
 
 function prepararQuizFavs(){
+    esSimulacroLargo = false;
     if(favoritosCloud.length === 0){ alert("No tens preferides"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
@@ -212,7 +213,7 @@ function prepararQuizFavs(){
 }
 
 function iniciarTest(){
-    indice = 0; aciertos = 0; fallos = 0; respondida = false;
+    indice = 0; aciertos = 0; fallos = 0; blancas = 0; respondida = false;
     document.getElementById("pantalla-inicio").classList.add("oculto");
     document.getElementById("pantalla-quiz").classList.remove("oculto");
     mostrarPregunta();
@@ -246,10 +247,16 @@ function mostrarPregunta(){
     const notaNum = ((aciertos - (fallos * 0.25)) / preguntas.length) * 10;
     const nota = Math.max(0, notaNum).toFixed(2).replace(".",",");
     
+    // Generador del contador condicional
+    let contadoresHTML = `<span style="color:#4CAF50">✅ ${aciertos}</span> | <span style="color:#f44336">❌ ${fallos}</span>`;
+    if (esSimulacroLargo) {
+        contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
+    }
+    
     document.getElementById("pregunta").innerHTML = `
         <div style="font-size:12px; color:#ffcc00; text-align:center; opacity:0.8; margin-bottom:5px;">${q.tema}</div>
         <div style="font-size:14px; margin-bottom:15px; text-align:center;">
-            ${indice + 1}/${preguntas.length} | <span style="color:#4CAF50">✅ ${aciertos}</span> | <span style="color:#f44336">❌ ${fallos}</span> | NOTA: ${nota}
+            ${indice + 1}/${preguntas.length} | ${contadoresHTML} | NOTA: ${nota}
         </div>
         <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>`;
 
@@ -278,7 +285,6 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     if (respondida) return;
     respondida = true;
     
-    // Comprobación exacta
     if (textoSeleccionado === respuestaCorrectaActual) {
         aciertos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#2e7d32";
@@ -286,7 +292,6 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
         fallos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#c62828";
         
-        // Pintamos la correcta buscando coincidencia exacta
         const botones = document.querySelectorAll("#opciones button");
         botones.forEach(btn => {
             const spanTexto = btn.querySelector(".texto-opcion").innerText;
@@ -337,8 +342,15 @@ function actualizarBotonFav(){
 }
 
 function anterior(){ if(indice > 0){ indice--; mostrarPregunta(); } }
+
 function siguiente(){
-    if(!respondida) return alert("Respon primer");
+    if(!respondida) {
+        if (esSimulacroLargo) {
+            blancas++; // Suma una blanca si es el simulacro oficial
+        } else {
+            return alert("Respon primer"); // Mantiene el bloqueo en los test normales
+        }
+    }
     indice++;
     if(indice >= preguntas.length) final();
     else mostrarPregunta();
@@ -348,9 +360,13 @@ function final(){
     const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
+    
+    let extraHTML = "";
+    if (esSimulacroLargo) extraHTML = ` | ⚪ ${blancas} en blanc`;
+
     document.getElementById("resultado").innerHTML = `
         <h2 style="color:#ff9800;">Resultat: ${nota}</h2>
-        <p>✅ ${aciertos} correctas | ❌ ${fallos} errors</p>`;
+        <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>`;
 }
 
 window.onload = () => { generarChecks(); };
