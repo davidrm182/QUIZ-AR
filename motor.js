@@ -78,9 +78,39 @@ async function validarPin(){
 
 function cargarFavoritosDesdeCloud() {
     return new Promise((resolve) => {
+        // 1. CARGAMOS LA COPIA LOCAL PRIMERO (Por si acaso)
+        const datosLocales = localStorage.getItem('misFavoritosOpos');
+        if (datosLocales) {
+            try {
+                favoritosCloud = JSON.parse(datosLocales);
+                const contador = document.getElementById("count-favs");
+                if (contador) contador.innerText = favoritosCloud.length;
+            } catch(e) { console.error("Error leyendo caché"); }
+        }
+
+        // 2. SI ESTAMOS OFFLINE, TERMINAMOS AQUÍ Y USAMOS LA CACHÉ
+        if (!navigator.onLine) {
+            console.log("Modo avión detectado. Usando favoritos guardados.");
+            resolve();
+            return;
+        }
+
+        // 3. SI HAY INTERNET, ACTUALIZAMOS DESDE GOOGLE
         const nombreFuncionCallback = 'callback_google_' + Math.floor(Math.random() * 1000000);
+        
+        // Timeout de seguridad por si falla la conexión a medias
+        const timeout = setTimeout(() => {
+            delete window[nombreFuncionCallback];
+            resolve(); // Resuelve la promesa y usa lo que haya en la caché
+        }, 5000);
+
         window[nombreFuncionCallback] = function(data) {
+            clearTimeout(timeout);
             favoritosCloud = data || [];
+            
+            // ACTUALIZAMOS LA COPIA LOCAL INVISIBLE
+            localStorage.setItem('misFavoritosOpos', JSON.stringify(favoritosCloud));
+            
             const contador = document.getElementById("count-favs");
             if (contador) contador.innerText = favoritosCloud.length;
             delete window[nombreFuncionCallback];
@@ -90,7 +120,10 @@ function cargarFavoritosDesdeCloud() {
         const script = document.createElement('script');
         script.id = 'temp-script-google';
         script.src = URL_APPS_SCRIPT + "?callback=" + nombreFuncionCallback + "&t=" + Date.now();
-        script.onerror = () => { resolve(); };
+        script.onerror = () => { 
+            clearTimeout(timeout);
+            resolve(); // Fallback a la caché si falla la red
+        };
         document.body.appendChild(script);
     });
 }
@@ -115,6 +148,12 @@ function seleccionar(estado,clase){
 
 // 4. CARGA DE PREGUNTAS (SISTEMA ROBUSTO)
 async function cargarPreguntas(temaId){
+    // Si estamos sin internet, esta función fallará y devolverá un array vacío
+    if (!navigator.onLine) {
+        alert("Necessites internet per descarregar temes nous. Les preferides sí que funcionen.");
+        return [];
+    }
+
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${temaId}&t=` + Date.now();
     try {
         const res = await fetch(url);
@@ -206,7 +245,7 @@ async function prepararQuiz(){
 
 function prepararQuizFavs(){
     esSimulacroLargo = false;
-    if(favoritosCloud.length === 0){ alert("No tens preferides"); return; }
+    if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
     iniciarTest();
@@ -303,28 +342,39 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     document.getElementById("btn-extra").disabled = false;
 }
 
-// 6. FAVORITOS CLOUD
+// 6. FAVORITOS CLOUD MEJORADO (OFFLINE/ONLINE)
 async function toggleFavoritoCloud(){
     const q = preguntas[indice];
     const btn = document.getElementById("btn-fav");
     const existe = favoritosCloud.some(f => f.pregunta === q.pregunta);
     const action = existe ? "remove" : "add";
+    
     btn.innerText = "⏳"; btn.disabled = true;
-    try {
-        fetch(URL_APPS_SCRIPT, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify({ action: action, pregunta: q })
-        });
-        if (action === "add") favoritosCloud.push(q);
-        else favoritosCloud = favoritosCloud.filter(f => f.pregunta !== q.pregunta);
-        setTimeout(() => {
-            actualizarBotonFav();
-            const contador = document.getElementById("count-favs");
-            if(contador) contador.innerText = favoritosCloud.length;
-            btn.disabled = false;
-        }, 1000);
-    } catch (e) { btn.disabled = false; }
+
+    // Actualizamos el array local al instante
+    if (action === "add") favoritosCloud.push(q);
+    else favoritosCloud = favoritosCloud.filter(f => f.pregunta !== q.pregunta);
+
+    // Guardamos la copia de seguridad invisible en el navegador
+    localStorage.setItem('misFavoritosOpos', JSON.stringify(favoritosCloud));
+
+    // Si hay internet, lo mandamos a Google Apps Script
+    if (navigator.onLine) {
+        try {
+            fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ action: action, pregunta: q })
+            });
+        } catch (e) { console.error("Error sincronitzant", e); }
+    }
+
+    setTimeout(() => {
+        actualizarBotonFav();
+        const contador = document.getElementById("count-favs");
+        if(contador) contador.innerText = favoritosCloud.length;
+        btn.disabled = false;
+    }, 500); 
 }
 
 function actualizarBotonFav(){
