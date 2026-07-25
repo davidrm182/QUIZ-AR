@@ -314,7 +314,7 @@ function mostrarPregunta(){
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:25px;">
             <button onclick="anterior()" style="padding:15px 0; background:#5d4037; border-radius:10px; font-size:20px;">⬅️</button>
             <button id="btn-fav" onclick="toggleFavoritoCloud()" style="padding:15px 0; background:#4a4a4a; border-radius:10px; font-size:20px; border:2px solid transparent;">⭐</button>
-            <button id="btn-extra" onclick="alert('${q.extra.replace(/'/g, "\\'") || 'Sense informació'}')" disabled style="padding:15px 0; background:#5d4037; border-radius:10px; font-size:20px;">🔍</button>
+            <button id="btn-extra" onclick="mostrarInfoExtra()" disabled style="padding:15px 0; background:#5d4037; border-radius:10px; font-size:20px;">🔍</button>
             <button onclick="siguiente()" style="padding:15px 0; background:#ff9800; border-radius:10px; font-size:20px;">➡️</button>
         </div>`;
     actualizarBotonFav();
@@ -416,7 +416,13 @@ function final(){
 
     document.getElementById("resultado").innerHTML = `
         <h2 style="color:#ff9800;">Resultat: ${nota}</h2>
-        <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>`;
+        <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>`;  
+}
+
+// Mostrar info extra con saltos de línea
+function mostrarInfoExtra() {
+    const q = preguntas[indice];
+    alert(q.extra ? q.extra : 'Sense informació');
 }
 
 window.onload = () => { generarChecks(); };
