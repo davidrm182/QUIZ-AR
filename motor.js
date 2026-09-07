@@ -14,13 +14,14 @@ const PESOS_SIMULACRO = {
 
 let preguntas = [];
 let favoritosCloud = []; 
+let cerebroSRS = JSON.parse(localStorage.getItem('cerebroSRS_Opos')) || {}; // NUEVO: Cerebro de memoria
 let indice = 0;
 let aciertos = 0;
 let fallos = 0;
-let blancas = 0; // NUEVO: Contador de blancas
+let blancas = 0; 
 let respondida = false;
 let respuestaCorrectaActual = ""; 
-let esSimulacroLargo = false; // NUEVO: Bandera para activar modo blancas
+let esSimulacroLargo = false; 
 
 // 1. LISTADO DE TEMAS COMPLETO
 const TEMAS_GENERAL = [
@@ -78,7 +79,6 @@ async function validarPin(){
 
 function cargarFavoritosDesdeCloud() {
     return new Promise((resolve) => {
-        // 1. CARGAMOS LA COPIA LOCAL PRIMERO (Por si acaso)
         const datosLocales = localStorage.getItem('misFavoritosOpos');
         if (datosLocales) {
             try {
@@ -88,27 +88,23 @@ function cargarFavoritosDesdeCloud() {
             } catch(e) { console.error("Error leyendo caché"); }
         }
 
-        // 2. SI ESTAMOS OFFLINE, TERMINAMOS AQUÍ Y USAMOS LA CACHÉ
         if (!navigator.onLine) {
             console.log("Modo avión detectado. Usando favoritos guardados.");
             resolve();
             return;
         }
 
-        // 3. SI HAY INTERNET, ACTUALIZAMOS DESDE GOOGLE
         const nombreFuncionCallback = 'callback_google_' + Math.floor(Math.random() * 1000000);
         
-        // Timeout de seguridad por si falla la conexión a medias
         const timeout = setTimeout(() => {
             delete window[nombreFuncionCallback];
-            resolve(); // Resuelve la promesa y usa lo que haya en la caché
+            resolve(); 
         }, 5000);
 
         window[nombreFuncionCallback] = function(data) {
             clearTimeout(timeout);
             favoritosCloud = data || [];
             
-            // ACTUALIZAMOS LA COPIA LOCAL INVISIBLE
             localStorage.setItem('misFavoritosOpos', JSON.stringify(favoritosCloud));
             
             const contador = document.getElementById("count-favs");
@@ -122,7 +118,7 @@ function cargarFavoritosDesdeCloud() {
         script.src = URL_APPS_SCRIPT + "?callback=" + nombreFuncionCallback + "&t=" + Date.now();
         script.onerror = () => { 
             clearTimeout(timeout);
-            resolve(); // Fallback a la caché si falla la red
+            resolve(); 
         };
         document.body.appendChild(script);
     });
@@ -146,9 +142,8 @@ function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-// 4. CARGA DE PREGUNTAS (SISTEMA ROBUSTO)
+// 4. CARGA DE PREGUNTAS
 async function cargarPreguntas(temaId){
-    // Si estamos sin internet, esta función fallará y devolverá un array vacío
     if (!navigator.onLine) {
         alert("Necessites internet per descarregar temes nous. Les preferides sí que funcionen.");
         return [];
@@ -182,9 +177,8 @@ async function cargarPreguntas(temaId){
     } catch (e) { return []; }
 }
 
-// --- FUNCIÓN MEJORADA: SIMULACROS CON FEEDBACK DE CARGA ---
 async function prepararSimulacro(tipo, botonClicado) {
-    esSimulacroLargo = (tipo === 'oficial'); // Detecta si es el oficial
+    esSimulacroLargo = (tipo === 'oficial'); 
 
     if (botonClicado) {
         botonClicado.innerText = "⏳ Carregant...";
@@ -219,7 +213,6 @@ async function prepararSimulacro(tipo, botonClicado) {
     iniciarTest();
 }
 
-// TEST NORMAL
 async function prepararQuiz(){
     esSimulacroLargo = false;
     const checks = document.querySelectorAll(".tema-check:checked");
@@ -258,7 +251,6 @@ function iniciarTest(){
     mostrarPregunta();
 }
 
-// ALGORITMO FISHER-YATES
 function mezclar(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -266,7 +258,7 @@ function mezclar(arr) {
     }
 }
 
-// 5. DINÁMICA DEL TEST CON COMPARACIÓN EXACTA
+// 5. DINÁMICA DEL TEST
 function obtenerRespuestasMezcladas(q) {
     let opciones = [
         { texto: q.a, id: 'a' },
@@ -286,7 +278,6 @@ function mostrarPregunta(){
     const notaNum = ((aciertos - (fallos * 0.25)) / preguntas.length) * 10;
     const nota = Math.max(0, notaNum).toFixed(2).replace(".",",");
     
-    // Generador del contador condicional
     let contadoresHTML = `<span style="color:#4CAF50">✅ ${aciertos}</span> | <span style="color:#f44336">❌ ${fallos}</span>`;
     if (esSimulacroLargo) {
         contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
@@ -324,12 +315,16 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     if (respondida) return;
     respondida = true;
     
+    const q = preguntas[indice]; // Identificar pregunta para el SRS
+    
     if (textoSeleccionado === respuestaCorrectaActual) {
         aciertos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#2e7d32";
+        actualizarSRS(q.pregunta, true); // Alimentar el cerebro SRS (Acierto)
     } else {
         fallos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#c62828";
+        actualizarSRS(q.pregunta, false); // Alimentar el cerebro SRS (Fallo)
         
         const botones = document.querySelectorAll("#opciones button");
         botones.forEach(btn => {
@@ -342,7 +337,7 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     document.getElementById("btn-extra").disabled = false;
 }
 
-// 6. FAVORITOS CLOUD MEJORADO (OFFLINE/ONLINE)
+// 6. FAVORITOS CLOUD
 async function toggleFavoritoCloud(){
     const q = preguntas[indice];
     const btn = document.getElementById("btn-fav");
@@ -351,14 +346,11 @@ async function toggleFavoritoCloud(){
     
     btn.innerText = "⏳"; btn.disabled = true;
 
-    // Actualizamos el array local al instante
     if (action === "add") favoritosCloud.push(q);
     else favoritosCloud = favoritosCloud.filter(f => f.pregunta !== q.pregunta);
 
-    // Guardamos la copia de seguridad invisible en el navegador
     localStorage.setItem('misFavoritosOpos', JSON.stringify(favoritosCloud));
 
-    // Si hay internet, lo mandamos a Google Apps Script
     if (navigator.onLine) {
         try {
             fetch(URL_APPS_SCRIPT, {
@@ -396,9 +388,9 @@ function anterior(){ if(indice > 0){ indice--; mostrarPregunta(); } }
 function siguiente(){
     if(!respondida) {
         if (esSimulacroLargo) {
-            blancas++; // Suma una blanca si es el simulacro oficial
+            blancas++; 
         } else {
-            return alert("Respon primer"); // Mantiene el bloqueo en los test normales
+            return alert("Respon primer"); 
         }
     }
     indice++;
@@ -419,10 +411,84 @@ function final(){
         <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>`;  
 }
 
-// Mostrar info extra con saltos de línea
 function mostrarInfoExtra() {
     const q = preguntas[indice];
     alert(q.extra ? q.extra : 'Sense informació');
+}
+
+// 7. --- ALGORITMO DE MEMORIA ESPACIADA (NUEVO) ---
+function actualizarSRS(textoPregunta, acertada) {
+    let stats = cerebroSRS[textoPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0 };
+
+    if (acertada) {
+        stats.racha++;
+        if (stats.racha === 1) stats.intervalo = 1; 
+        else if (stats.racha === 2) stats.intervalo = 6; 
+        else stats.intervalo = Math.ceil(stats.intervalo * stats.facilidad); 
+    } else {
+        stats.racha = 0; 
+        stats.intervalo = 1; 
+        stats.facilidad = Math.max(1.3, stats.facilidad - 0.2); 
+    }
+
+    const unDia = 24 * 60 * 60 * 1000;
+    stats.proximoRepaso = Date.now() + (stats.intervalo * unDia);
+
+    cerebroSRS[textoPregunta] = stats;
+    localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
+}
+
+// 8. --- CARGA DEL REPASO INTELIGENTE GLOBAL (NUEVO) ---
+async function prepararRepasoInteligente() {
+    if (!navigator.onLine) {
+        return alert("Necessites internet per descarregar tot el temari i analitzar-lo.");
+    }
+
+    const btn = document.getElementById("btn-srs");
+    if(btn) { btn.innerText = "⏳ Analitzant 25 temes..."; btn.disabled = true; }
+
+    let todasLasPreguntas = [];
+    const todosLosTemas = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id);
+
+    try {
+        const promesas = todosLosTemas.map(id => cargarPreguntas(id));
+        const resultados = await Promise.all(promesas);
+        
+        resultados.forEach(lista => todasLasPreguntas = todasLasPreguntas.concat(lista));
+
+        const ahora = Date.now();
+        let paraRepasar = [];
+        let nuevas = [];
+
+        todasLasPreguntas.forEach(q => {
+            const stats = cerebroSRS[q.pregunta];
+            if (!stats) {
+                nuevas.push(q);
+            } else if (stats.proximoRepaso <= ahora) {
+                paraRepasar.push(q);
+            }
+        });
+
+        mezclar(paraRepasar);
+        mezclar(nuevas);
+
+        // SESIÓN: Máximo 30 repasos + 10 nuevas
+        preguntas = [...paraRepasar.slice(0, 30), ...nuevas.slice(0, 10)];
+        mezclar(preguntas); 
+
+        if (preguntas.length === 0) {
+            alert("No tens res pendent per avui! Descansa una mica.");
+            if(btn) { btn.innerText = "🧠 Repàs Intel·ligent Diari"; btn.disabled = false; }
+            return;
+        }
+
+        esSimulacroLargo = false;
+        iniciarTest();
+        
+    } catch (e) {
+        alert("Error de connexió al carregar tot el temari.");
+        if(btn) { btn.innerText = "🧠 Repàs Intel·ligent Diari"; btn.disabled = false; }
+    }
 }
 
 window.onload = () => { generarChecks(); };
