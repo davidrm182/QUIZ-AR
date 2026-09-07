@@ -149,7 +149,13 @@
         <div id="pantalla-inicio" class="card">
             <h1>opos agent rural</h1>
 
-       <button onclick="prepararSimulacro('oficial', this)" class="btn-check" style="background:#2e7d32 !important; color:white !important; margin-bottom: 10px;">
+            <!-- BOTÓN DEL NUEVO SISTEMA DE MEMORIA ESPACIADA -->
+            <button id="btn-srs" onclick="prepararRepasoInteligente()" style="background:#673ab7 !important; color:white !important; border-radius:10px; margin-bottom: 20px; font-size:18px;">
+                🧠 Repàs Intel·ligent Diari
+            </button>
+            <hr>
+
+            <button onclick="prepararSimulacro('oficial', this)" class="btn-check" style="background:#2e7d32 !important; color:white !important; margin-bottom: 10px;">
                 🎯 Fer Simulacre Oficial (80 preg.)
             </button>
             
@@ -206,7 +212,8 @@
 
     </div>
 
-    <script src="motor.js?v=2.9"></script>
+    <!-- VERSIÓN ACTUALIZADA A 4.0 PARA FORZAR CARGA DE CACHÉ -->
+    <script src="motor.js?v=4.0"></script>
 </body>
 
 </html>
