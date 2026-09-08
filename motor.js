@@ -282,9 +282,27 @@ function mostrarPregunta(){
     if (esSimulacroLargo) {
         contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
     }
+
+    // --- NUEVO: LÓGICA DE ESTADÍSTICAS SRS ---
+    let statsPregunta = cerebroSRS[q.pregunta];
+    let infoSRSHTML = "";
+    
+    if (!statsPregunta) {
+        infoSRSHTML = `<div style="font-size:12px; color:#64b5f6; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🆕 PREGUNTA NOVA</div>`;
+    } else {
+        let rachaTxt = statsPregunta.racha > 0 ? `🔥 Racha: ${statsPregunta.racha}` : `⚠️ Pendent de superar`;
+        let fallosTxt = statsPregunta.fallosTotales > 0 ? ` | ❌ Fallada: ${statsPregunta.fallosTotales} veg.` : ``;
+        let intervaloTxt = ` | ⏳ Pròxim repàs: +${statsPregunta.intervalo} dies`;
+        
+        infoSRSHTML = `<div style="font-size:11.5px; color:#b0bec5; text-align:center; margin-bottom:10px; font-weight:500;">
+            ${rachaTxt}${fallosTxt}${intervaloTxt}
+        </div>`;
+    }
+    // -----------------------------------------
     
     document.getElementById("pregunta").innerHTML = `
         <div style="font-size:12px; color:#ffcc00; text-align:center; opacity:0.8; margin-bottom:5px;">${q.tema}</div>
+        ${infoSRSHTML}
         <div style="font-size:14px; margin-bottom:15px; text-align:center;">
             ${indice + 1}/${preguntas.length} | ${contadoresHTML} | NOTA: ${nota}
         </div>
@@ -418,7 +436,8 @@ function mostrarInfoExtra() {
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (NUEVO) ---
 function actualizarSRS(textoPregunta, acertada) {
-    let stats = cerebroSRS[textoPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0 };
+    // Añadimos fallosTotales al objeto por defecto
+    let stats = cerebroSRS[textoPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
 
     if (acertada) {
         stats.racha++;
@@ -429,6 +448,7 @@ function actualizarSRS(textoPregunta, acertada) {
         stats.racha = 0; 
         stats.intervalo = 1; 
         stats.facilidad = Math.max(1.3, stats.facilidad - 0.2); 
+        stats.fallosTotales = (stats.fallosTotales || 0) + 1; // Registra el fallo histórico
     }
 
     const unDia = 24 * 60 * 60 * 1000;
