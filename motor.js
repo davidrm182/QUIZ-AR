@@ -522,15 +522,19 @@ async function prepararRepasoInteligente() {
     }
 }
 
-// 9. --- SINCRONIZACIÓN EN LA NUBE DEL CEREBRO SRS ---
+// 9. --- SINCRONIZACIÓN EN LA NUBE DEL CEREBRO SRS (Método GET seguro) ---
 function sincronizarSRSCloud() {
     if (!navigator.onLine) return;
     try {
-        fetch(URL_APPS_SCRIPT, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify({ action: "sync_srs", data: cerebroSRS })
-        });
+        const datosComprimidos = encodeURIComponent(JSON.stringify(cerebroSRS));
+        const urlSync = `${URL_APPS_SCRIPT}?action=sync_srs&data=${datosComprimidos}&t=${Date.now()}`;
+        
+        // Usamos un script tag dinámico igual que al leer, evitando bloqueos CORS
+        const scriptSync = document.createElement('script');
+        scriptSync.src = urlSync;
+        scriptSync.onload = () => scriptSync.remove();
+        scriptSync.onerror = () => scriptSync.remove();
+        document.body.appendChild(scriptSync);
     } catch (e) { console.error("Error sincronitzant SRS al núvol", e); }
 }
 
