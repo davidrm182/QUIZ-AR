@@ -174,6 +174,7 @@ async function cargarPreguntas(temaId){
                 if (!r || !r.c) return null;
                 return {
                     tema: getNombreTema(temaId),
+                    id: r.c[7] ? String(r.c[7].v || "").trim() : "",
                     pregunta: r.c[0] ? String(r.c[0].v || "") : "",
                     a: r.c[1] ? String(r.c[1].v || "") : "",
                     b: r.c[2] ? String(r.c[2].v || "") : "",
@@ -293,7 +294,7 @@ function mostrarPregunta(){
         contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
     }
 
-    let statsPregunta = cerebroSRS[q.pregunta];
+    let statsPregunta = cerebroSRS[q.id];
     let infoSRSHTML = "";
     
     if (!statsPregunta) {
@@ -346,11 +347,11 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     if (textoSeleccionado === respuestaCorrectaActual) {
         aciertos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#2e7d32";
-        actualizarSRS(q.pregunta, true); 
+        actualizarSRS(q.id, true); 
     } else {
         fallos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#c62828";
-        actualizarSRS(q.pregunta, false); 
+        actualizarSRS(q.id, false); 
         
         const botones = document.querySelectorAll("#opciones button");
         botones.forEach(btn => {
@@ -448,8 +449,10 @@ function final(){
 }
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (SRS) ---
-function actualizarSRS(textoPregunta, acertada) {
-    let stats = cerebroSRS[textoPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
+function actualizarSRS(idPregunta, acertada) {
+    if (!idPregunta) { console.warn("Pregunta sense ID, no es guarda al SRS."); return; }
+
+    let stats = cerebroSRS[idPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
 
     if (acertada) {
         stats.racha++;
@@ -466,7 +469,7 @@ function actualizarSRS(textoPregunta, acertada) {
     const unDia = 24 * 60 * 60 * 1000;
     stats.proximoRepaso = Date.now() + (stats.intervalo * unDia);
 
-    cerebroSRS[textoPregunta] = stats;
+    cerebroSRS[idPregunta] = stats;
     localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
 }
 
@@ -493,7 +496,7 @@ async function prepararRepasoInteligente() {
         let nuevas = [];
 
         todasLasPreguntas.forEach(q => {
-            const stats = cerebroSRS[q.pregunta];
+            const stats = cerebroSRS[q.id];
             if (!stats) {
                 nuevas.push(q);
             } else if (stats.proximoRepaso <= ahora) {
