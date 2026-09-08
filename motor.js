@@ -14,7 +14,7 @@ const PESOS_SIMULACRO = {
 
 let preguntas = [];
 let favoritosCloud = []; 
-let cerebroSRS = JSON.parse(localStorage.getItem('cerebroSRS_Opos')) || {}; // NUEVO: Cerebro de memoria
+let cerebroSRS = JSON.parse(localStorage.getItem('cerebroSRS_Opos')) || {}; 
 let indice = 0;
 let aciertos = 0;
 let fallos = 0;
@@ -61,7 +61,7 @@ function getNombreTema(id){
     return t ? t.nombre : id;
 }
 
-// 2. LOGIN Y CARGA DE FAVORITOS
+// 2. LOGIN Y CARGA DE FAVORITOS / SRS DESDE LA NUBE
 async function validarPin(){
     const input = document.getElementById("pin-input").value;
     const btn = document.querySelector("button[onclick='validarPin()']");
@@ -79,17 +79,17 @@ async function validarPin(){
 
 function cargarFavoritosDesdeCloud() {
     return new Promise((resolve) => {
-        const datosLocales = localStorage.getItem('misFavoritosOpos');
-        if (datosLocales) {
+        const datosLocalesFavs = localStorage.getItem('misFavoritosOpos');
+        if (datosLocalesFavs) {
             try {
-                favoritosCloud = JSON.parse(datosLocales);
+                favoritosCloud = JSON.parse(datosLocalesFavs);
                 const contador = document.getElementById("count-favs");
                 if (contador) contador.innerText = favoritosCloud.length;
-            } catch(e) { console.error("Error leyendo caché"); }
+            } catch(e) { console.error("Error llegint caché de favorits"); }
         }
 
         if (!navigator.onLine) {
-            console.log("Modo avión detectado. Usando favoritos guardados.");
+            console.log("Modo avión detectado. Usando datos guardados localmente.");
             resolve();
             return;
         }
@@ -104,19 +104,15 @@ function cargarFavoritosDesdeCloud() {
         window[nombreFuncionCallback] = function(data) {
             clearTimeout(timeout);
             
-            // El nuevo script devuelve un objeto {favoritos: [], srs: {}}
             if (data && data.favoritos !== undefined) {
                 favoritosCloud = data.favoritos;
-                
-                // Si la nube tiene datos de memoria, los inyectamos y sobreescribimos el PC/Móvil
                 if (data.srs && Object.keys(data.srs).length > 0) {
                     cerebroSRS = data.srs;
                 }
             } else {
-                favoritosCloud = data || []; // Por si lee caché antigua
+                favoritosCloud = data || []; 
             }
             
-            // Respaldamos en el dispositivo local por si te quedas sin cobertura
             localStorage.setItem('misFavoritosOpos', JSON.stringify(favoritosCloud));
             localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
             
@@ -125,6 +121,14 @@ function cargarFavoritosDesdeCloud() {
             delete window[nombreFuncionCallback];
             document.getElementById('temp-script-google')?.remove();
             resolve();
+        };
+
+        const script = document.createElement('script');
+        script.id = 'temp-script-google';
+        script.src = URL_APPS_SCRIPT + "?callback=" + nombreFuncionCallback + "&t=" + Date.now();
+        script.onerror = () => { 
+            clearTimeout(timeout);
+            resolve(); 
         };
         document.body.appendChild(script);
     });
@@ -264,7 +268,7 @@ function mezclar(arr) {
     }
 }
 
-// 5. DINÁMICA DEL TEST
+// 5. DINÁMICA DEL TEST Y ESTADÍSTICAS SRS VISUALES
 function obtenerRespuestasMezcladas(q) {
     let opciones = [
         { texto: q.a, id: 'a' },
@@ -289,7 +293,6 @@ function mostrarPregunta(){
         contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
     }
 
-    // --- NUEVO: LÓGICA DE ESTADÍSTICAS SRS ---
     let statsPregunta = cerebroSRS[q.pregunta];
     let infoSRSHTML = "";
     
@@ -304,7 +307,6 @@ function mostrarPregunta(){
             ${rachaTxt}${fallosTxt}${intervaloTxt}
         </div>`;
     }
-    // -----------------------------------------
     
     document.getElementById("pregunta").innerHTML = `
         <div style="font-size:12px; color:#ffcc00; text-align:center; opacity:0.8; margin-bottom:5px;">${q.tema}</div>
@@ -339,16 +341,16 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     if (respondida) return;
     respondida = true;
     
-    const q = preguntas[indice]; // Identificar pregunta para el SRS
+    const q = preguntas[indice];
     
     if (textoSeleccionado === respuestaCorrectaActual) {
         aciertos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#2e7d32";
-        actualizarSRS(q.pregunta, true); // Alimentar el cerebro SRS (Acierto)
+        actualizarSRS(q.pregunta, true); 
     } else {
         fallos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#c62828";
-        actualizarSRS(q.pregunta, false); // Alimentar el cerebro SRS (Fallo)
+        actualizarSRS(q.pregunta, false); 
         
         const botones = document.querySelectorAll("#opciones button");
         botones.forEach(btn => {
@@ -382,7 +384,7 @@ async function toggleFavoritoCloud(){
                 mode: "no-cors",
                 body: JSON.stringify({ action: action, pregunta: q })
             });
-        } catch (e) { console.error("Error sincronitzant", e); }
+        } catch (e) { console.error("Error sincronitzant preferides", e); }
     }
 
     setTimeout(() => {
@@ -445,9 +447,8 @@ function final(){
     }, 1500);
 }
 
-// 7. --- ALGORITMO DE MEMORIA ESPACIADA (NUEVO) ---
+// 7. --- ALGORITMO DE MEMORIA ESPACIADA (SRS) ---
 function actualizarSRS(textoPregunta, acertada) {
-    // Añadimos fallosTotales al objeto por defecto
     let stats = cerebroSRS[textoPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
 
     if (acertada) {
@@ -459,7 +460,7 @@ function actualizarSRS(textoPregunta, acertada) {
         stats.racha = 0; 
         stats.intervalo = 1; 
         stats.facilidad = Math.max(1.3, stats.facilidad - 0.2); 
-        stats.fallosTotales = (stats.fallosTotales || 0) + 1; // Registra el fallo histórico
+        stats.fallosTotales = (stats.fallosTotales || 0) + 1; 
     }
 
     const unDia = 24 * 60 * 60 * 1000;
@@ -469,7 +470,7 @@ function actualizarSRS(textoPregunta, acertada) {
     localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
 }
 
-// 8. --- CARGA DEL REPASO INTELIGENTE GLOBAL (NUEVO) ---
+// 8. --- CARGA DEL REPASO INTELIGENTE GLOBAL ---
 async function prepararRepasoInteligente() {
     if (!navigator.onLine) {
         return alert("Necessites internet per descarregar tot el temari i analitzar-lo.");
@@ -503,7 +504,6 @@ async function prepararRepasoInteligente() {
         mezclar(paraRepasar);
         mezclar(nuevas);
 
-        // SESIÓN: Máximo 30 repasos + 10 nuevas
         preguntas = [...paraRepasar.slice(0, 30), ...nuevas.slice(0, 10)];
         mezclar(preguntas); 
 
@@ -520,7 +520,9 @@ async function prepararRepasoInteligente() {
         alert("Error de connexió al carregar tot el temari.");
         if(btn) { btn.innerText = "🧠 Repàs Intel·ligent Diari"; btn.disabled = false; }
     }
-    // 9. --- SINCRONIZACIÓN EN LA NUBE ---
+}
+
+// 9. --- SINCRONIZACIÓN EN LA NUBE DEL CEREBRO SRS ---
 function sincronizarSRSCloud() {
     if (!navigator.onLine) return;
     try {
@@ -531,6 +533,10 @@ function sincronizarSRSCloud() {
         });
     } catch (e) { console.error("Error sincronitzant SRS al núvol", e); }
 }
+
+function mostrarInfoExtra() {
+    const q = preguntas[indice];
+    alert(q.extra ? q.extra : 'Sense informació');
 }
 
 window.onload = () => { generarChecks(); };
