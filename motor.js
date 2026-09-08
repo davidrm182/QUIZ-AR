@@ -103,22 +103,28 @@ function cargarFavoritosDesdeCloud() {
 
         window[nombreFuncionCallback] = function(data) {
             clearTimeout(timeout);
-            favoritosCloud = data || [];
             
+            // El nuevo script devuelve un objeto {favoritos: [], srs: {}}
+            if (data && data.favoritos !== undefined) {
+                favoritosCloud = data.favoritos;
+                
+                // Si la nube tiene datos de memoria, los inyectamos y sobreescribimos el PC/Móvil
+                if (data.srs && Object.keys(data.srs).length > 0) {
+                    cerebroSRS = data.srs;
+                }
+            } else {
+                favoritosCloud = data || []; // Por si lee caché antigua
+            }
+            
+            // Respaldamos en el dispositivo local por si te quedas sin cobertura
             localStorage.setItem('misFavoritosOpos', JSON.stringify(favoritosCloud));
+            localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
             
             const contador = document.getElementById("count-favs");
             if (contador) contador.innerText = favoritosCloud.length;
             delete window[nombreFuncionCallback];
             document.getElementById('temp-script-google')?.remove();
             resolve();
-        };
-        const script = document.createElement('script');
-        script.id = 'temp-script-google';
-        script.src = URL_APPS_SCRIPT + "?callback=" + nombreFuncionCallback + "&t=" + Date.now();
-        script.onerror = () => { 
-            clearTimeout(timeout);
-            resolve(); 
         };
         document.body.appendChild(script);
     });
@@ -426,12 +432,17 @@ function final(){
 
     document.getElementById("resultado").innerHTML = `
         <h2 style="color:#ff9800;">Resultat: ${nota}</h2>
-        <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>`;  
-}
-
-function mostrarInfoExtra() {
-    const q = preguntas[indice];
-    alert(q.extra ? q.extra : 'Sense informació');
+        <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>
+        <p id="msg-sync" style="font-size:13px; color:#64b5f6; margin-top:20px; font-weight:bold;">
+            ⏳ Sincronitzant cervell amb el núvol...
+        </p>`;  
+        
+    sincronizarSRSCloud();
+    
+    setTimeout(() => {
+        const msg = document.getElementById("msg-sync");
+        if(msg) msg.innerHTML = "☁️ Progrés guardat correctament al núvol!";
+    }, 1500);
 }
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (NUEVO) ---
@@ -509,6 +520,17 @@ async function prepararRepasoInteligente() {
         alert("Error de connexió al carregar tot el temari.");
         if(btn) { btn.innerText = "🧠 Repàs Intel·ligent Diari"; btn.disabled = false; }
     }
+    // 9. --- SINCRONIZACIÓN EN LA NUBE ---
+function sincronizarSRSCloud() {
+    if (!navigator.onLine) return;
+    try {
+        fetch(URL_APPS_SCRIPT, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ action: "sync_srs", data: cerebroSRS })
+        });
+    } catch (e) { console.error("Error sincronitzant SRS al núvol", e); }
+}
 }
 
 window.onload = () => { generarChecks(); };
