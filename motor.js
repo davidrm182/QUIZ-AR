@@ -300,9 +300,9 @@ function mostrarPregunta(){
     if (!statsPregunta) {
         infoSRSHTML = `<div style="font-size:12px; color:#64b5f6; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🆕 PREGUNTA NOVA</div>`;
     } else {
-        let rachaTxt = statsPregunta.racha > 0 ? `🔥 Racha: ${statsPregunta.racha}` : `⚠️ Pendent de superar`;
-        let fallosTxt = statsPregunta.fallosTotales > 0 ? ` | ❌ Fallada: ${statsPregunta.fallosTotales} veg.` : ``;
-        let intervaloTxt = ` | ⏳ Pròxim repàs: +${statsPregunta.intervalo} dies`;
+        let rachaTxt = statsPregunta.racha > 0 ? `🔥 ${statsPregunta.racha}` : `⚠️`;
+        let fallosTxt = statsPregunta.fallosTotales > 0 ? ` | ❌ ${statsPregunta.fallosTotales} veg.` : ``;
+        let intervaloTxt = ` | ⏳ +${statsPregunta.intervalo} dies`;
         
         infoSRSHTML = `<div style="font-size:11.5px; color:#b0bec5; text-align:center; margin-bottom:10px; font-weight:500;">
             ${rachaTxt}${fallosTxt}${intervaloTxt}
@@ -512,7 +512,7 @@ async function prepararRepasoInteligente() {
 
         if (preguntas.length === 0) {
             alert("No tens res pendent per avui! Descansa una mica.");
-            if(btn) { btn.innerText = "🧠 Repàs Intel·ligent Diari"; btn.disabled = false; }
+            if(btn) { btn.innerText = "🧠 Repàs Intel·ligent"; btn.disabled = false; }
             return;
         }
 
@@ -521,7 +521,7 @@ async function prepararRepasoInteligente() {
         
     } catch (e) {
         alert("Error de connexió al carregar tot el temari.");
-        if(btn) { btn.innerText = "🧠 Repàs Intel·ligent Diari"; btn.disabled = false; }
+        if(btn) { btn.innerText = "🧠 Repàs Intel·ligent"; btn.disabled = false; }
     }
 }
 
