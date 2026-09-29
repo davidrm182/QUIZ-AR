@@ -2,7 +2,7 @@ const SHEET_ID = "16L9GDzTaz04WeGMXCBzLlYans9Jm0Ys94txHpXz-uq8";
 const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbymXsfKvSVAJtCtwfJYhZR_5LIgzbIdZCN4TvZsPx3TDVfccIcllsS-Jk_9qvwnBNkpYQ/exec"; 
 const PIN_CORRECTO = "1989";
 
-// --- CONFIGURACIÓN DEL SIMULACRO OFICIAL (Editable) ---
+// --- CONFIGURACIÓ DEL SIMULACRO OFICIAL (Editable) ---
 const PESOS_SIMULACRO = {
     "tg1": 4, "tg2": 3, "tg3": 4, "tg4": 3,
     "te1": 4, "te2": 4, "te3": 4, "te4": 3, "te5": 4,
@@ -542,7 +542,24 @@ function sincronizarSRSCloud() {
 
 function mostrarInfoExtra() {
     const q = preguntas[indice];
-    alert(q.extra ? q.extra : 'Sense informació');
+    const contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
+
+    let modal = document.getElementById('modal-extra');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-extra';
+        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; padding:15px; box-sizing:border-box;";
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div style="background:#2d241e; border:1px solid #5d4037; border-radius:14px; width:100%; max-width:600px; max-height:85vh; overflow-y:auto; padding:20px; color:white; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
+            <div style="font-size:13.5px; line-height:1.6; margin-bottom:20px; overflow-x:auto;">
+                ${contenido}
+            </div>
+            <button onclick="document.getElementById('modal-extra').remove()" style="background:#ff9800; border:none; padding:12px 25px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Tancar ✖️</button>
+        </div>
+    `;
 }
 
 window.onload = () => { generarChecks(); };
