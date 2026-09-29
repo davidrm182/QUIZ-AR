@@ -544,7 +544,7 @@ function mostrarInfoExtra() {
     const q = preguntas[indice];
     let contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
     
-    // Esto convierte automáticamente cada salto de línea de la celda en un <br> visual
+    // Mantiene los intros como saltos de línea automáticos
     contenido = contenido.replace(/\n/g, '<br>');
 
     let modal = document.getElementById('modal-extra');
@@ -557,10 +557,10 @@ function mostrarInfoExtra() {
 
     modal.innerHTML = `
         <div style="background:#2d241e; border:1px solid #5d4037; border-radius:14px; width:100%; max-width:600px; max-height:85vh; overflow-y:auto; padding:20px; color:white; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
-            <div style="font-size:13.5px; line-height:1.6; margin-bottom:20px; overflow-x:auto;">
+            <div style="font-size: 16px; line-height: 1.6; margin-bottom: 20px; overflow-x: auto;">
                 ${contenido}
             </div>
-            <button onclick="document.getElementById('modal-extra').remove()" style="background:#ff9800; border:none; padding:12px 25px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Tancar ✖️</button>
+            <button onclick="document.getElementById('modal-extra').remove()" style="background:#ff9800; border:none; padding:14px 25px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Tancar ✖️</button>
         </div>
     `;
 }
