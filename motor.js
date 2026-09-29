@@ -542,7 +542,10 @@ function sincronizarSRSCloud() {
 
 function mostrarInfoExtra() {
     const q = preguntas[indice];
-    const contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
+    let contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
+    
+    // Esto convierte automáticamente cada salto de línea de la celda en un <br> visual
+    contenido = contenido.replace(/\n/g, '<br>');
 
     let modal = document.getElementById('modal-extra');
     if (!modal) {
@@ -561,5 +564,4 @@ function mostrarInfoExtra() {
         </div>
     `;
 }
-
 window.onload = () => { generarChecks(); };
