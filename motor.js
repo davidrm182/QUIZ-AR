@@ -473,7 +473,7 @@ function actualizarSRS(idPregunta, acertada) {
     localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
 }
 
-// 8. --- CARGA DEL REPASO INTELIGENTE GLOBAL ---
+// 8. --- CARGA DEL REPASO INTELIGENTE GLOBAL CON PURGA AUTOMÁTICA ---
 async function prepararRepasoInteligente() {
     if (!navigator.onLine) {
         return alert("Necessites internet per descarregar tot el temari i analitzar-lo.");
@@ -491,7 +491,25 @@ async function prepararRepasoInteligente() {
         
         resultados.forEach(lista => todasLasPreguntas = todasLasPreguntas.concat(lista));
 
-        const ahora = Date.now();
+        // --- PURGA AUTOMÀTICA DE PREGUNTES ELIMINADES DEL SHEETS ---
+        const idsValidos = new Set(todasLasPreguntas.map(q => q.id));
+        let hiHaCanvis = false;
+
+        Object.keys(cerebroSRS).forEach(id => {
+            if (id && !idsValidos.has(id)) {
+                delete cerebroSRS[id];
+                hiHaCanvis = true;
+            }
+        });
+
+        if (hiHaCanvis) {
+            localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
+            sincronizarSRSCloud();
+            console.log("🧹 Purga automàtica: s'han eliminat preguntes descartades del cervell SRS.");
+        }
+        // -----------------------------------------------------------
+
+        const ara = Date.now();
         let paraRepasar = [];
         let nuevas = [];
 
@@ -499,7 +517,7 @@ async function prepararRepasoInteligente() {
             const stats = cerebroSRS[q.id];
             if (!stats) {
                 nuevas.push(q);
-            } else if (stats.proximoRepaso <= ahora) {
+            } else if (stats.proximoRepaso <= ara) {
                 paraRepasar.push(q);
             }
         });
