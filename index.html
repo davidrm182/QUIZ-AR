@@ -156,19 +156,31 @@
             </button>
             <hr>
 
-            <button onclick="prepararSimulacro('oficial', this)" class="btn-check" style="background:#2e7d32 !important; color:white !important; margin-bottom: 10px;">
+            <!-- SELECTOR DE DIFICULTAT I SIMULACRES -->
+            <div style="margin-bottom: 15px;">
+                <label style="background: transparent; border: none; padding: 0; font-weight: bold; font-size: 14px;">Dificultat dels Simulacres:</label>
+                <select id="selector-dificultad" style="margin-top: 5px;">
+                    <option value="tots">🔀 Mixt / Tots els nivells (Aleatori)</option>
+                    <option value="facil">🟢 Fàcil (80% assequibles / 20% febles)</option>
+                    <option value="mitja">🟡 Mitjà (Equilibrat 50% / 50%)</option>
+                    <option value="dificil">🔴 Difícil (Exigent 70% febles / 30% base)</option>
+                </select>
+            </div>
+
+            <button onclick="prepararSimulacro('oficial', this, document.getElementById('selector-dificultad').value)" class="btn-check" style="background:#2e7d32 !important; color:white !important; margin-bottom: 10px;">
                 🎯 Simulacre Oficial (80 preg.)
             </button>
             
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <button onclick="prepararSimulacro('light', this)" class="btn-check" style="background:#43a047 !important; color:white !important; margin: 0;">
+                <button onclick="prepararSimulacro('light', this, document.getElementById('selector-dificultad').value)" class="btn-check" style="background:#43a047 !important; color:white !important; margin: 0;">
                     🌗 Light (~43 preg.)
                 </button>
-                <button onclick="prepararSimulacro('ultra', this)" class="btn-check" style="background:#66bb6a !important; color:white !important; margin: 0;">
+                <button onclick="prepararSimulacro('ultra', this, document.getElementById('selector-dificultad').value)" class="btn-check" style="background:#66bb6a !important; color:white !important; margin: 0;">
                     ⚡ Ultra (25 preg.)
                 </button>
             </div>
-
+            <!-- FI SELECTOR DE DIFICULTAT I SIMULACRES -->
+            
             <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn-fav">⭐ Fer test de preferides (<span id="count-favs">0</span>)</button>
             <hr>
 
@@ -213,8 +225,8 @@
 
     </div>
 
-    <!-- VERSIÓN ACTUALIZADA A 5.6 PARA FORZAR CARGA DE CACHÉ -->
-    <script src="motor.js?v=5.6"></script>
+    <!-- VERSIÓN ACTUALIZADA A 5.7 PARA FORZAR CARGA DE CACHÉ -->
+    <script src="motor.js?v=5.7"></script>
 </body>
 
 </html>
