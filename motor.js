@@ -152,7 +152,7 @@ function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
 }
 
-// 4. CARGA DE PREGUNTAS
+// 4. CARGA DE PREGUNTAS Y CLUSTERIZACIÓN POR DIFICULTAD
 async function cargarPreguntas(temaId){
     if (!navigator.onLine) {
         alert("Necessites internet per descarregar temes nous. Les preferides sí que funcionen.");
@@ -188,7 +188,78 @@ async function cargarPreguntas(temaId){
     } catch (e) { return []; }
 }
 
-async function prepararSimulacro(tipo, botonClicado) {
+function obtenerDificultadPregunta(idPregunta) {
+    const stats = cerebroSRS[idPregunta];
+    if (!stats) return 'mitja'; // Noves sense historial -> Categoria neutra
+
+    const fallos = stats.fallosTotales || 0;
+    const racha = stats.racha || 0;
+    const facilidad = stats.facilidad || 2.5;
+
+    // Criteri de pregunta difícil / punt feble
+    if (fallos >= 2 || facilidad < 2.0 || (racha === 0 && fallos > 0)) {
+        return 'dificil';
+    }
+    // Criteri de pregunta fàcil / consolidada
+    if (racha >= 3 && fallos <= 1 && facilidad >= 2.2) {
+        return 'facil';
+    }
+    return 'mitja';
+}
+
+function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
+    if (nivel === 'tots') {
+        mezclar(listaTema);
+        return listaTema.slice(0, cantidad);
+    }
+
+    let dificils = [];
+    let facilsMitjanes = [];
+
+    listaTema.forEach(q => {
+        if (obtenerDificultadPregunta(q.id) === 'dificil') {
+            dificils.push(q);
+        } else {
+            facilsMitjanes.push(q);
+        }
+    });
+
+    mezclar(dificils);
+    mezclar(facilsMitjanes);
+
+    let quotaDificils = 0;
+
+    if (nivel === 'dificil') {
+        // 70% difícils / febles, 30% fàcils / base
+        quotaDificils = Math.round(cantidad * 0.7);
+        if (cantidad <= 2 && dificils.length > 0) quotaDificils = 1;
+    } else if (nivel === 'mitja') {
+        // 50% / 50%
+        quotaDificils = Math.round(cantidad * 0.5);
+    } else if (nivel === 'facil') {
+        // 20% difícils, 80% fàcils
+        quotaDificils = Math.round(cantidad * 0.2);
+    }
+
+    let quotaFacils = cantidad - quotaDificils;
+
+    let seleccioDificils = dificils.slice(0, quotaDificils);
+    let seleccioFacils = facilsMitjanes.slice(0, quotaFacils);
+
+    let seleccionadas = [...seleccioDificils, ...seleccioFacils];
+
+    // Fallback: Si falten preguntes en un cluster, reomple amb la resta del mateix tema
+    if (seleccionadas.length < cantidad) {
+        let restants = listaTema.filter(q => !seleccionadas.includes(q));
+        mezclar(restants);
+        seleccionadas = [...seleccionadas, ...restants.slice(0, cantidad - seleccionadas.length)];
+    }
+
+    mezclar(seleccionadas);
+    return seleccionadas.slice(0, cantidad);
+}
+
+async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
     esSimulacroLargo = (tipo === 'oficial'); 
 
     if (botonClicado) {
@@ -212,8 +283,9 @@ async function prepararSimulacro(tipo, botonClicado) {
         if (cantidad > 0) {
             let listaTema = await cargarPreguntas(idTema); 
             if (listaTema.length > 0) {
-                mezclar(listaTema); 
-                preguntas = preguntas.concat(listaTema.slice(0, cantidad)); 
+                // S'aplica el filtre de clusterització respectant el pes del tema
+                let seleccionadas = filtrarPreguntasPorDificultad(listaTema, cantidad, dificultad);
+                preguntas = preguntas.concat(seleccionadas); 
             }
         }
     }
@@ -223,7 +295,6 @@ async function prepararSimulacro(tipo, botonClicado) {
     mezclar(preguntas);
     iniciarTest();
 }
-
 async function prepararQuiz(){
     esSimulacroLargo = false;
     const checks = document.querySelectorAll(".tema-check:checked");
