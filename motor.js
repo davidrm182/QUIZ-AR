@@ -22,6 +22,7 @@ let blancas = 0;
 let respondida = false;
 let respuestaCorrectaActual = ""; 
 let esSimulacroLargo = false; 
+let esModoAptitudinal = false; // Flag independent per a psicotècnics
 
 // 1. LISTADO DE TEMAS COMPLETO
 const TEMAS_GENERAL = [
@@ -56,6 +57,7 @@ const TEMAS_ESPECIFICO = [
 ];
 
 function getNombreTema(id){
+    if (id === 'taav') return "Aptitud Verbal (TAAV)";
     const all = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO];
     const t = all.find(item => item.id === id);
     return t ? t.nombre : id;
@@ -154,7 +156,7 @@ function seleccionar(estado,clase){
 
 // 4. CARGA DE PREGUNTAS Y CLUSTERIZACIÓN POR DIFICULTAD
 async function cargarPreguntas(temaId){
-    if (!navigator.onLine) {
+    if (!navigator.onLine && temaId !== 'taav') {
         alert("Necessites internet per descarregar temes nous. Les preferides sí que funcionen.");
         return [];
     }
@@ -190,17 +192,15 @@ async function cargarPreguntas(temaId){
 
 function obtenerDificultadPregunta(idPregunta) {
     const stats = cerebroSRS[idPregunta];
-    if (!stats) return 'mitja'; // Noves sense historial -> Categoria neutra
+    if (!stats) return 'mitja'; 
 
     const fallos = stats.fallosTotales || 0;
     const racha = stats.racha || 0;
     const facilidad = stats.facilidad || 2.5;
 
-    // Criteri de pregunta difícil / punt feble
     if (fallos >= 2 || facilidad < 2.0 || (racha === 0 && fallos > 0)) {
         return 'dificil';
     }
-    // Criteri de pregunta fàcil / consolidada
     if (racha >= 3 && fallos <= 1 && facilidad >= 2.2) {
         return 'facil';
     }
@@ -230,14 +230,11 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
     let quotaDificils = 0;
 
     if (nivel === 'dificil') {
-        // 70% difícils / febles, 30% fàcils / base
         quotaDificils = Math.round(cantidad * 0.7);
         if (cantidad <= 2 && dificils.length > 0) quotaDificils = 1;
     } else if (nivel === 'mitja') {
-        // 50% / 50%
         quotaDificils = Math.round(cantidad * 0.5);
     } else if (nivel === 'facil') {
-        // 20% difícils, 80% fàcils
         quotaDificils = Math.round(cantidad * 0.2);
     }
 
@@ -248,7 +245,6 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
 
     let seleccionadas = [...seleccioDificils, ...seleccioFacils];
 
-    // Fallback: Si falten preguntes en un cluster, reomple amb la resta del mateix tema
     if (seleccionadas.length < cantidad) {
         let restants = listaTema.filter(q => !seleccionadas.includes(q));
         mezclar(restants);
@@ -259,7 +255,25 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
     return seleccionadas.slice(0, cantidad);
 }
 
+// --- NOU: FUNCIÓ PER INICIAR TEST APTITUDINAL INDEPENDIENTMENT ---
+async function prepararTestAptitudinal(codigoTema) {
+    esModoAptitudinal = true;
+    esSimulacroLargo = false;
+
+    preguntas = await cargarPreguntas(codigoTema);
+    
+    if (!preguntas || preguntas.length === 0) {
+        alert(`No s'han trobat preguntes per a "${codigoTema}". Revisa que la pestanya existeixi al Google Sheets.`);
+        esModoAptitudinal = false;
+        return;
+    }
+
+    mezclar(preguntas);
+    iniciarTest();
+}
+
 async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
+    esModoAptitudinal = false;
     esSimulacroLargo = (tipo === 'oficial'); 
 
     if (botonClicado) {
@@ -283,7 +297,6 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
         if (cantidad > 0) {
             let listaTema = await cargarPreguntas(idTema); 
             if (listaTema.length > 0) {
-                // S'aplica el filtre de clusterització respectant el pes del tema
                 let seleccionadas = filtrarPreguntasPorDificultad(listaTema, cantidad, dificultad);
                 preguntas = preguntas.concat(seleccionadas); 
             }
@@ -295,7 +308,9 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
     mezclar(preguntas);
     iniciarTest();
 }
+
 async function prepararQuiz(){
+    esModoAptitudinal = false;
     esSimulacroLargo = false;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
@@ -319,6 +334,7 @@ async function prepararQuiz(){
 }
 
 function prepararQuizFavs(){
+    esModoAptitudinal = false;
     esSimulacroLargo = false;
     if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
     preguntas = [...favoritosCloud];
@@ -365,10 +381,12 @@ function mostrarPregunta(){
         contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
     }
 
-    let statsPregunta = cerebroSRS[q.id];
+    let statsPregunta = esModoAptitudinal ? null : cerebroSRS[q.id];
     let infoSRSHTML = "";
     
-    if (!statsPregunta) {
+    if (esModoAptitudinal) {
+        infoSRSHTML = `<div style="font-size:12px; color:#00897b; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🧩 TEST APTITUDINAL</div>`;
+    } else if (!statsPregunta) {
         infoSRSHTML = `<div style="font-size:12px; color:#64b5f6; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🆕 PREGUNTA NOVA</div>`;
     } else {
         let rachaTxt = statsPregunta.racha > 0 ? `🔥 ${statsPregunta.racha}` : `⚠️`;
@@ -384,7 +402,7 @@ function mostrarPregunta(){
         <div style="font-size:12px; color:#ffcc00; text-align:center; opacity:0.8; margin-bottom:5px;">${q.tema}</div>
         ${infoSRSHTML}
         <div style="font-size:14px; margin-bottom:15px; text-align:center;">
-            ${indice + 1}/${preguntas.length} | ${contadoresHTML} | NOTA: ${nota}
+            ${indice + 1}/${preguntas.length} | ${contadoresHTML} ${!esModoAptitudinal ? '| NOTA: ' + nota : ''}
         </div>
         <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>`;
 
@@ -418,11 +436,15 @@ function verificarRespuesta(textoSeleccionado, indiceBoton) {
     if (textoSeleccionado === respuestaCorrectaActual) {
         aciertos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#2e7d32";
-        actualizarSRS(q.id, true); 
+        if (!esModoAptitudinal) {
+            actualizarSRS(q.id, true); 
+        }
     } else {
         fallos++;
         document.getElementById(`btn-opcion-${indiceBoton}`).style.background = "#c62828";
-        actualizarSRS(q.id, false); 
+        if (!esModoAptitudinal) {
+            actualizarSRS(q.id, false); 
+        }
         
         const botones = document.querySelectorAll("#opciones button");
         botones.forEach(btn => {
@@ -497,10 +519,18 @@ function siguiente(){
 }
 
 function final(){
-    const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
+
+    if (esModoAptitudinal) {
+        document.getElementById("resultado").innerHTML = `
+            <h2 style="color:#00897b;">Test Aptitudinal Finalitzat</h2>
+            <p>✅ ${aciertos} encerts | ❌ ${fallos} errors</p>
+            <p style="font-size:13px; color:#b0bec5; margin-top:20px;">Mode entrenament independent (sense registre SRS).</p>`;
+        return;
+    }
     
+    const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     let extraHTML = "";
     if (esSimulacroLargo) extraHTML = ` | ⚪ ${blancas} en blanc`;
 
@@ -521,6 +551,7 @@ function final(){
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (SRS) ---
 function actualizarSRS(idPregunta, acertada) {
+    if (esModoAptitudinal) return; // Protecció total per no tocar el SRS en aptitudinals
     if (!idPregunta) { console.warn("Pregunta sense ID, no es guarda al SRS."); return; }
 
     let stats = cerebroSRS[idPregunta] || { racha: 0, facilidad: 2.5, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
@@ -546,6 +577,7 @@ function actualizarSRS(idPregunta, acertada) {
 
 // 8. --- CARGA DEL REPASO INTELIGENTE GLOBAL CON PURGA AUTOMÁTICA ---
 async function prepararRepasoInteligente() {
+    esModoAptitudinal = false;
     if (!navigator.onLine) {
         return alert("Necessites internet per descarregar tot el temari i analitzar-lo.");
     }
@@ -562,7 +594,6 @@ async function prepararRepasoInteligente() {
         
         resultados.forEach(lista => todasLasPreguntas = todasLasPreguntas.concat(lista));
 
-        // --- PURGA AUTOMÀTICA DE PREGUNTES ELIMINADES DEL SHEETS ---
         const idsValidos = new Set(todasLasPreguntas.map(q => q.id));
         let hiHaCanvis = false;
 
@@ -576,9 +607,7 @@ async function prepararRepasoInteligente() {
         if (hiHaCanvis) {
             localStorage.setItem('cerebroSRS_Opos', JSON.stringify(cerebroSRS));
             sincronizarSRSCloud();
-            console.log("🧹 Purga automàtica: s'han eliminat preguntes descartades del cervell SRS.");
         }
-        // -----------------------------------------------------------
 
         const ara = Date.now();
         let paraRepasar = [];
@@ -614,9 +643,9 @@ async function prepararRepasoInteligente() {
     }
 }
 
-// 9. --- SINCRONIZACIÓN EN LA NUBE DEL CEREBRO SRS (Método POST, sin límite de URL) ---
+// 9. --- SINCRONIZACIÓN EN LA NUBE DEL CEREBRO SRS ---
 function sincronizarSRSCloud() {
-    if (!navigator.onLine) return;
+    if (esModoAptitudinal || !navigator.onLine) return;
     try {
         fetch(URL_APPS_SCRIPT, {
             method: "POST",
@@ -632,8 +661,6 @@ function sincronizarSRSCloud() {
 function mostrarInfoExtra() {
     const q = preguntas[indice];
     let contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
-    
-    // Mantiene los intros como saltos de línea automáticos
     contenido = contenido.replace(/\n/g, '<br>');
 
     let modal = document.getElementById('modal-extra');
