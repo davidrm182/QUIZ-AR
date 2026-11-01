@@ -29,9 +29,9 @@ const FACILIDAD_INICIAL = 2.5;
 const FACILIDAD_MINIMA = 1.3;
 const RECUPERACION_FACILIDAD = 0.05; // +0,05 per encert (a partir del 2n seguit) fins a tornar a 2,5
 
-// Data de l'examen "AAAA-MM-DD" (opcional, ex.: "2027-03-14"). Si s'informa, cap repàs s'ajorna
-// més d'1/3 del temps que queda fins a l'examen. Amb null no hi ha topall.
-const FECHA_EXAMEN = null;
+// Data de l'examen "AAAA-MM-DD" (PROVISIONAL: 9 de gener de 2027; canvia-la quan sigui oficial).
+// Cap repàs s'ajorna més d'1/3 del temps que queda fins a l'examen. Amb null no hi ha topall.
+const FECHA_EXAMEN = "2027-01-09";
 
 const CLAVE_SRS = 'cerebroSRS_Opos';
 const CLAVE_SRS_BACKUP = 'cerebroSRS_Opos_backup'; // còpia local abans de qualsevol purga
