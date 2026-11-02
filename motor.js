@@ -572,6 +572,9 @@ function recalcularContadores() {
 }
 
 function pintarResultado(idElegido, idCorrecto) {
+    // En revelar acert/error, la resta d'opcions s'apaguen perquè el resultat es vegi d'un cop d'ull (a cegues no es revela res)
+    const contenedor = document.getElementById("opciones");
+    if (contenedor) contenedor.classList.toggle('revelado', !modoCiegas);
     opcionesActuales.forEach((o, i) => {
         const btn = document.getElementById(`btn-opcion-${i}`);
         if (!btn) return;
@@ -648,6 +651,7 @@ function mostrarPregunta(){
         html += `<button id="btn-opcion-${i}" class="opcion" onclick="verificarRespuesta(${i})">${letra}<span class="texto-opcion op-texto">${o.texto}</span><span id="icon-opcion-${i}" class="op-icono"></span></button>`;
     });
     document.getElementById("opciones").innerHTML = html;
+    document.getElementById("opciones").classList.remove('revelado');
 
     document.getElementById("contenedor-controles").innerHTML = `
         <div class="controles">
