@@ -759,6 +759,9 @@ async function final(){
         ? `<div class="stat"><span class="c-neutro">${ico('circulo')}en blanc</span><b>${blancas}</b></div>` : "";
     const etiquetaCiegas = modoCiegas
         ? `<div class="chips centrado"><span class="chip c-info">${ico('ojoOff')}simulacre a cegues</span></div>` : "";
+    // A cegues no has vist les correccions: al final es poden revisar els errors (i les preguntes en blanc)
+    const botonRevision = (modoCiegas && fallos + blancas > 0)
+        ? `<button class="btn btn-outline" onclick="mostrarRevision()">${ico('lupa')}${textoBotonRevision()}</button>` : "";
 
     document.getElementById("resultado").innerHTML = `
         <div class="sec-label">resultat</div>
@@ -769,6 +772,7 @@ async function final(){
             <div class="stat"><span class="c-ko">${ico('x')}errors</span><b>${fallos}</b></div>
             ${statBlanc}
         </div>
+        ${botonRevision}
         <p id="msg-sync" class="sync-msg">${ico('reloj')}<span>Sincronitzant cervell amb el núvol...</span></p>`;
 
     // Missatge REAL: només diu "guardat" si la núvol ha confirmat els últims repassos
@@ -785,6 +789,58 @@ async function final(){
         msg.className = "sync-msg aviso";
         msg.innerHTML = ico('aviso') + "<span>No he pogut confirmar el desat al núvol. El progrés queda guardat al mòbil i es reintentarà en entrar.</span>";
     }
+}
+
+// --- REVISIÓ D'ERRORS (només després d'un simulacre a cegues) ---
+function textoBotonRevision() {
+    const n = fallos + blancas;
+    if (fallos > 0 && blancas > 0) return `Revisar errors i en blanc (${n})`;
+    if (fallos > 0) return `Revisar errors (${n})`;
+    return `Revisar les en blanc (${n})`;
+}
+
+function mostrarRevision() {
+    const items = [];
+    preguntas.forEach((q, i) => {
+        const r = respuestasDadas[i];
+        if (r && !r.blanca && r.acierto) return; // encertada: no cal revisar-la
+        items.push({ q: q, i: i, r: r });
+    });
+
+    document.getElementById("resum-revision").textContent = `${fallos} errors · ${blancas} en blanc`;
+    document.getElementById("lista-revision").innerHTML = items.map(({ q, i, r }) => {
+        const elegida = r && !r.blanca ? r.elegida : null;
+        const orden = ordenOpciones[i] || obtenerRespuestasMezcladas(q).opciones; // l'ordre que vas veure al test
+        const opciones = orden.map((o, k) => {
+            let clases = "opcion estatica", icono = "";
+            if (o.id === q.correcta) { clases += " ok"; icono = ico('check'); }
+            else if (o.id === elegida) { clases += " ko"; icono = ico('x'); }
+            const letra = MOSTRAR_LETRAS ? `<span class="letra">${"ABCD"[k] || ""}</span>` : "";
+            return `<div class="${clases}">${letra}<span class="op-texto">${o.texto}</span><span class="op-icono">${icono}</span></div>`;
+        }).join("");
+        const estado = elegida
+            ? `<span class="chip c-ko">${ico('x')}error</span>`
+            : `<span class="chip c-neutro">${ico('circulo')}en blanc</span>`;
+        const extra = prepararContenidoExtra(q);
+        const extraHTML = extra
+            ? `<details class="rev-extra"><summary>${ico('lupa')}Informació extra</summary><div class="contenido">${extra}</div></details>` : "";
+        return `<article class="rev-card">
+            <div class="rev-cab"><span class="q-tema">${q.tema}</span>${estado}<span class="rev-num">#${i + 1}</span></div>
+            <p class="q-texto">${q.pregunta}</p>
+            <div class="rev-ops">${opciones}</div>
+            ${extraHTML}
+        </article>`;
+    }).join("");
+
+    document.getElementById("pantalla-final").classList.add("oculto");
+    document.getElementById("pantalla-revision").classList.remove("oculto");
+    window.scrollTo(0, 0);
+}
+
+function cerrarRevision() {
+    document.getElementById("pantalla-revision").classList.add("oculto");
+    document.getElementById("pantalla-final").classList.remove("oculto");
+    window.scrollTo(0, 0);
 }
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (SRS) ---
@@ -1038,13 +1094,19 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-function mostrarInfoExtra() {
-    const q = preguntas[indice];
-    let contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
+// HTML de l'extra d'una pregunta (buit si no en té). El fa servir la lupa i la revisió d'errors.
+function prepararContenidoExtra(q) {
+    let contenido = q.extra ? q.extra : '';
     contenido = contenido.replace(/\n/g, '<br>');
     // Celdes del Sheet amb cometes dobles (style=""...""): el navegador ignora l'estil i la imatge
     // surt a mida natural. Només es toquen valors d'atribut sense '=' ni cometes a dins.
     contenido = contenido.replace(/=""([^"<>=]*)""/g, '="$1"');
+    return contenido;
+}
+
+function mostrarInfoExtra() {
+    const q = preguntas[indice];
+    const contenido = prepararContenidoExtra(q) || 'Sense informació extra per a aquesta pregunta.';
 
     let modal = document.getElementById('modal-extra');
     if (!modal) {

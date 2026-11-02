@@ -440,6 +440,37 @@
         .sync-msg.aviso { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
 
         /* =====================================================================
+           REVISIÓ D'ERRORS (al final d'un simulacre a cegues)
+           ===================================================================== */
+        .cab-rev { display: flex; align-items: center; gap: 12px; }
+        .cab-rev h2 { flex: 1; }
+        .lista-rev { display: flex; flex-direction: column; gap: 14px; }
+        .rev-card {
+            display: flex; flex-direction: column; gap: 12px;
+            padding: 16px; background: var(--surface);
+            border: 1px solid var(--line); border-radius: 18px;
+        }
+        .rev-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .rev-cab .q-tema { text-align: left; flex: 1; min-width: 0; }
+        .rev-num { font-size: 13px; font-weight: 700; color: var(--muted); }
+        .rev-ops { display: flex; flex-direction: column; gap: 8px; }
+        .opcion.estatica { cursor: default; min-height: 52px; background: var(--bg); }
+        .opcion.estatica.ok { background: var(--ok-bg); }
+        .opcion.estatica.ko { background: var(--ko-bg); }
+        .rev-extra summary {
+            display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none;
+            font-size: 13.5px; font-weight: 600; color: var(--info);
+        }
+        .rev-extra summary::-webkit-details-marker { display: none; }
+        .rev-extra[open] summary { margin-bottom: 10px; }
+        /* El contingut de l'extra ve del Sheet i està pensat per a fons fosc: sempre dins d'una caixa fosca */
+        .rev-extra .contenido {
+            background: #16241B; color: #E9EFE6; border: 1px solid #2A4232; border-radius: 12px;
+            padding: 12px; font-size: 15px; line-height: 1.6; overflow: auto;
+        }
+        .rev-extra img { max-width: 100%; height: auto; border-radius: 6px; }
+
+        /* =====================================================================
            MODAL DE LA LUPA (info extra). Sempre fosc: el contingut ve del Sheet i està pensat per a fons fosc.
            Les imatges s'ajusten sempre a la finestra (ample i alt), sense scroll i amb el botó Tancar visible.
            ===================================================================== */
@@ -624,6 +655,18 @@
         <div id="pantalla-final" class="card oculto">
             <div id="resultado"></div>
             <button onclick="location.reload()" class="btn btn-cta">nou test</button>
+        </div>
+
+        <div id="pantalla-revision" class="card oculto">
+            <div class="cab-rev">
+                <button type="button" class="btn-tema" onclick="cerrarRevision()" aria-label="Tornar al resultat" title="Tornar al resultat">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+                </button>
+                <h2>revisió d'errors</h2>
+            </div>
+            <div id="resum-revision" class="sec-label"></div>
+            <div id="lista-revision" class="lista-rev"></div>
+            <button onclick="cerrarRevision()" class="btn btn-cta">tornar al resultat</button>
         </div>
 
     </div>
