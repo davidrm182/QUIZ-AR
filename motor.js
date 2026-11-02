@@ -21,7 +21,6 @@ let fallos = 0;
 let blancas = 0; 
 let respondida = false;
 let esSimulacroLargo = false; 
-let esModoAptitudinal = false; // Flag independent per a psicotècnics
 
 // --- CONSTANTS I ESTAT DEL SRS ---
 const DIA = 24 * 60 * 60 * 1000;
@@ -36,6 +35,7 @@ const FECHA_EXAMEN = "2027-01-09";
 const CLAVE_SRS = 'cerebroSRS_Opos';
 const CLAVE_SRS_BACKUP = 'cerebroSRS_Opos_backup'; // còpia local abans de qualsevol purga
 const CLAVE_PENDIENTE = 'cerebroSRS_pendiente_sync'; // '1' = hi ha repassos locals sense confirmar al núvol
+const CLAVE_ULTIMO_SYNC = 'cerebroSRS_ultimo_sync'; // ms: tot el que hi havia en local abans d'aquest moment ja era al núvol
 const MAX_PURGA_PCT = 0.25; // si una purga esborraria més d'aquest % del SRS (mínim 20), es cancel·la
 let SYNC_ESPERA_MS = 15000; // com a màxim una sincronització cada 15 s mentre vas responent
 let VERIFICACION_ESPERAS = [3000, 6000, 10000]; // quan es llegeix la núvol per confirmar el desat
@@ -80,7 +80,6 @@ const TEMAS_ESPECIFICO = [
 ];
 
 function getNombreTema(id){
-    if (id === 'taav') return "Aptitud Verbal (TAAV)";
     const all = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO];
     const t = all.find(item => item.id === id);
     return t ? t.nombre : id;
@@ -94,6 +93,7 @@ async function validarPin(){
         btn.innerText = "Sincronitzant...";
         btn.disabled = true;
         await cargarFavoritosDesdeCloud();
+        purgarIdsDeTemasDesconocidos();
         document.getElementById("pantalla-bloqueo").classList.add("oculto");
         document.getElementById("contingut-protegit").classList.remove("oculto");
         generarChecks();
@@ -109,6 +109,8 @@ function guardarSRSLocal() { localStorage.setItem(CLAVE_SRS, JSON.stringify(cere
 function haySyncPendiente() { return localStorage.getItem(CLAVE_PENDIENTE) === '1'; }
 function marcarPendienteSync() { localStorage.setItem(CLAVE_PENDIENTE, '1'); }
 function limpiarPendienteSync() { localStorage.removeItem(CLAVE_PENDIENTE); }
+function leerUltimoSync() { const n = Number(localStorage.getItem(CLAVE_ULTIMO_SYNC)); return isNaN(n) ? 0 : n; }
+function guardarUltimoSync(ms) { localStorage.setItem(CLAVE_ULTIMO_SYNC, String(ms)); }
 function redondear2(n) { return Math.round(n * 100) / 100; }
 function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -131,20 +133,37 @@ function normalizarStats(s) {
 }
 
 // Fusiona el SRS local amb el del núvol: per a cada pregunta guanya el repàs MÉS RECENT.
-// (Abans el núvol sobreescrivia el local i es perdia el que no s'havia pogut sincronitzar.)
-function fusionarSRS(local, nube) {
+// Una entrada que només és en local pot ser (a) feina nova encara sense pujar, o (b) una entrada que ja
+// s'havia pujat i després s'ha esborrat del núvol (pregunta eliminada, fila esborrada a mà...).
+// Es distingeixen amb ultimoSync: si el seu darrer repàs és anterior a l'última sincronització confirmada,
+// ja havia arribat al núvol, i que ara no hi sigui vol dir que s'ha esborrat → no es ressuscita.
+// (Sense això, un equip desfasat tornava a pujar les files esborrades cada cop que entrava.)
+function fusionarSRS(local, nube, ultimoSync = 0) {
     const resultado = {};
+    const esborrades = [];
     let localGana = 0;
     const ids = new Set([...Object.keys(local || {}), ...Object.keys(nube || {})]);
     ids.forEach(id => {
         const l = local && local[id];
         const n = nube && nube[id] ? normalizarStats(nube[id]) : null;
-        if (l && !n) { resultado[id] = l; localGana++; }
+        if (l && !n) {
+            if (ultimoSync > 0 && ultimaActividad(l) <= ultimoSync) esborrades.push(id);
+            else { resultado[id] = l; localGana++; }
+        }
         else if (n && !l) { resultado[id] = n; }
         else if (ultimaActividad(l) > ultimaActividad(n)) { resultado[id] = l; localGana++; }
         else { resultado[id] = n; } // empat: mana el núvol, com abans
     });
-    return { srs: resultado, localGana: localGana };
+
+    // Salvaguarda: si "esborraria" massa (p. ex. el núvol ha tornat dades parcials), es conserva tot
+    const total = Object.keys(local || {}).length;
+    let descartadas = esborrades.length;
+    if (descartadas > Math.max(20, total * MAX_PURGA_PCT)) {
+        console.warn(`Fusió: ${descartadas} de ${total} entrades locals semblen esborrades del núvol; per seguretat es conserven.`);
+        esborrades.forEach(id => { resultado[id] = local[id]; localGana++; });
+        descartadas = 0;
+    }
+    return { srs: resultado, localGana: localGana, descartadas: descartadas };
 }
 
 // Demana les dades a Apps Script (JSONP). Retorna les dades, o null si no hi ha connexió / error / timeout.
@@ -198,9 +217,16 @@ async function cargarFavoritosDesdeCloud() {
     if (data && data.favoritos !== undefined) {
         favoritosCloud = data.favoritos;
         if (data.srs && Object.keys(data.srs).length > 0) {
-            const fusion = fusionarSRS(cerebroSRS, data.srs);
+            const antes = cerebroSRS;
+            const fusion = fusionarSRS(antes, data.srs, leerUltimoSync());
             cerebroSRS = fusion.srs;
+            if (fusion.descartadas > 0) {
+                // còpia de seguretat de l'estat local anterior, per si de cas
+                localStorage.setItem(CLAVE_SRS_BACKUP, JSON.stringify({ fecha: Date.now(), data: antes }));
+                console.log(`Fusió: ${fusion.descartadas} entrades locals ja no existeixen al núvol i s'han descartat.`);
+            }
             if (fusion.localGana > 0) marcarPendienteSync(); // el local té repassos que el núvol no té
+            else guardarUltimoSync(Date.now());              // res de nou en local: en sincronia amb el núvol
         }
     } else {
         favoritosCloud = data || [];
@@ -247,7 +273,7 @@ async function fetchTextoConTimeout(url, ms = 12000) {
 // estricto = true: si la càrrega falla, LLANÇA l'error en lloc de tornar [] (ho usa el repàs intel·ligent,
 // perquè "no s'ha pogut carregar" no es confongui amb "el tema no té preguntes" i s'esborri progrés).
 async function cargarPreguntas(temaId, estricto = false){
-    if (!navigator.onLine && temaId !== 'taav') {
+    if (!navigator.onLine) {
         if (estricto) throw new Error("offline");
         alert("Necessites internet per descarregar temes nous. Les preferides sí que funcionen.");
         return [];
@@ -361,25 +387,7 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
     return seleccionadas.slice(0, cantidad);
 }
 
-// --- NOU: FUNCIÓ PER INICIAR TEST APTITUDINAL INDEPENDIENTMENT ---
-async function prepararTestAptitudinal(codigoTema) {
-    esModoAptitudinal = true;
-    esSimulacroLargo = false;
-
-    preguntas = await cargarPreguntas(codigoTema);
-    
-    if (!preguntas || preguntas.length === 0) {
-        alert(`No s'han trobat preguntes per a "${codigoTema}". Revisa que la pestanya existeixi al Google Sheets.`);
-        esModoAptitudinal = false;
-        return;
-    }
-
-    mezclar(preguntas);
-    iniciarTest();
-}
-
 async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
-    esModoAptitudinal = false;
     esSimulacroLargo = (tipo === 'oficial'); 
 
     if (botonClicado) {
@@ -416,7 +424,6 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
 }
 
 async function prepararQuiz(){
-    esModoAptitudinal = false;
     esSimulacroLargo = false;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
@@ -440,7 +447,6 @@ async function prepararQuiz(){
 }
 
 function prepararQuizFavs(){
-    esModoAptitudinal = false;
     esSimulacroLargo = false;
     if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
     preguntas = [...favoritosCloud];
@@ -517,12 +523,10 @@ function mostrarPregunta(){
         contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
     }
 
-    let statsPregunta = esModoAptitudinal ? null : cerebroSRS[q.id];
+    let statsPregunta = cerebroSRS[q.id];
     let infoSRSHTML = "";
 
-    if (esModoAptitudinal) {
-        infoSRSHTML = `<div style="font-size:12px; color:#00897b; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🧩 TEST APTITUDINAL</div>`;
-    } else if (!statsPregunta) {
+    if (!statsPregunta) {
         infoSRSHTML = `<div style="font-size:12px; color:#64b5f6; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🆕 PREGUNTA NOVA</div>`;
     } else {
         let rachaTxt = statsPregunta.racha > 0 ? `🔥 ${statsPregunta.racha}` : `⚠️`;
@@ -538,7 +542,7 @@ function mostrarPregunta(){
         <div style="font-size:12px; color:#ffcc00; text-align:center; opacity:0.8; margin-bottom:5px;">${q.tema}</div>
         ${infoSRSHTML}
         <div style="font-size:14px; margin-bottom:15px; text-align:center;">
-            ${indice + 1}/${preguntas.length} | ${contadoresHTML} ${!esModoAptitudinal ? '| NOTA: ' + nota : ''}
+            ${indice + 1}/${preguntas.length} | ${contadoresHTML} | NOTA: ${nota}
         </div>
         <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>`;
 
@@ -578,7 +582,7 @@ function verificarRespuesta(indiceBoton) {
     pintarResultado(opcion.id, q.correcta);
 
     // Només es registra al SRS la 1a resposta: després la pregunta queda bloquejada
-    if (!esModoAptitudinal) actualizarSRS(q.id, acierto);
+    actualizarSRS(q.id, acierto);
     document.getElementById("btn-extra").disabled = false;
 }
 
@@ -649,14 +653,6 @@ async function final(){
     document.getElementById("pantalla-final").classList.remove("oculto");
     recalcularContadores();
 
-    if (esModoAptitudinal) {
-        document.getElementById("resultado").innerHTML = `
-            <h2 style="color:#00897b;">Test Aptitudinal Finalitzat</h2>
-            <p>✅ ${aciertos} encerts | ❌ ${fallos} errors</p>
-            <p style="font-size:13px; color:#b0bec5; margin-top:20px;">Mode entrenament independent (sense registre SRS).</p>`;
-        return;
-    }
-
     const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     let extraHTML = "";
     if (esSimulacroLargo) extraHTML = ` | ⚪ ${blancas} en blanc`;
@@ -710,7 +706,6 @@ function urgenciaRepaso(stats, ara) {
 }
 
 function actualizarSRS(idPregunta, acertada) {
-    if (esModoAptitudinal) return; // Protecció total per no tocar el SRS en aptitudinals
     if (!idPregunta) { console.warn("Pregunta sense ID, no es guarda al SRS."); return; }
 
     let stats = cerebroSRS[idPregunta] || { racha: 0, facilidad: FACILIDAD_INICIAL, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
@@ -766,8 +761,28 @@ function purgarHuerfanas(todasLasPreguntas, temasVerificados) {
     sincronizarSRSCloud();
 }
 
+// Entrades del SRS que no pertanyen a cap dels 25 temes (p. ex. restes de "taav" d'una versió antiga amb
+// tests aptitudinals): no poden ser mai preguntes del repàs, així que s'esborren en entrar, sense haver de
+// descarregar res. Retorna quantes n'ha esborrat.
+function purgarIdsDeTemasDesconocidos() {
+    const validos = new Set([...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id));
+    const sobrantes = Object.keys(cerebroSRS).filter(id => !validos.has(String(id).split('-')[0]));
+    if (sobrantes.length === 0) return 0;
+
+    const total = Object.keys(cerebroSRS).length;
+    if (sobrantes.length > Math.max(20, total * MAX_PURGA_PCT)) {
+        console.warn(`Neteja cancel·lada: s'esborrarien ${sobrantes.length} de ${total} entrades del SRS.`);
+        return 0;
+    }
+    localStorage.setItem(CLAVE_SRS_BACKUP, JSON.stringify({ fecha: Date.now(), data: cerebroSRS }));
+    sobrantes.forEach(id => delete cerebroSRS[id]);
+    versionSRS++;
+    guardarSRSLocal();
+    marcarPendienteSync(); // així en entrar es puja ja neta al núvol
+    return sobrantes.length;
+}
+
 async function prepararRepasoInteligente() {
-    esModoAptitudinal = false;
     if (!navigator.onLine) {
         return alert("Necessites internet per descarregar tot el temari i analitzar-lo.");
     }
@@ -867,7 +882,7 @@ async function verificarSyncEnNube(instantanea) {
 
 // Retorna true si el desat s'ha confirmat (verificar:true) o s'ha enviat (verificar:false).
 async function sincronizarSRSCloud({ verificar = false } = {}) {
-    if (esModoAptitudinal || !navigator.onLine) return false;
+    if (!navigator.onLine) return false;
 
     if (syncEnCurso) {
         if (!verificar) { programarSyncSRS(); return false; }
@@ -878,6 +893,7 @@ async function sincronizarSRSCloud({ verificar = false } = {}) {
 
     const versionEnviada = versionSRS;
     const instantanea = JSON.parse(JSON.stringify(cerebroSRS));
+    const inicioSync = Date.now();
 
     try {
         await fetch(URL_APPS_SCRIPT, {
@@ -889,6 +905,7 @@ async function sincronizarSRSCloud({ verificar = false } = {}) {
             })
         });
         const confirmado = verificar ? await verificarSyncEnNube(instantanea) : true;
+        if (verificar && confirmado) guardarUltimoSync(inicioSync); // tot el que és anterior a inicioSync ja és al núvol
         if (versionEnviada !== versionSRS) {
             programarSyncSRS(); // hi ha hagut repassos nous mentre s'enviava
         } else if (verificar && confirmado) {
