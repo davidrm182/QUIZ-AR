@@ -915,21 +915,37 @@ function mostrarInfoExtra() {
     const q = preguntas[indice];
     let contenido = q.extra ? q.extra : 'Sense informació extra per a aquesta pregunta.';
     contenido = contenido.replace(/\n/g, '<br>');
+    // Celdes del Sheet amb cometes dobles (style=""...""): el navegador ignora l'estil i la imatge
+    // surt a mida natural. Només es toquen valors d'atribut sense '=' ni cometes a dins.
+    contenido = contenido.replace(/=""([^"<>=]*)""/g, '="$1"');
 
     let modal = document.getElementById('modal-extra');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'modal-extra';
-        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; padding:15px; box-sizing:border-box;";
+        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; padding:10px; box-sizing:border-box;";
         document.body.appendChild(modal);
     }
 
+    // Les imatges sempre s'ajusten a la finestra (ample i alt), sense scroll i amb el botó Tancar visible.
+    // !important perquè mani sobre qualsevol style inline de la cel·la.
     modal.innerHTML = `
-        <div style="background:#2d241e; border:1px solid #5d4037; border-radius:14px; width:100%; max-width:600px; max-height:85vh; overflow-y:auto; padding:20px; color:white; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
-            <div style="font-size: 16px; line-height: 1.6; margin-bottom: 20px; overflow-x: auto;">
+        <style>
+            #modal-extra img {
+                display: block; margin: 0 auto;
+                width: auto !important; height: auto !important;
+                max-width: min(100%, calc(100vw - 52px)) !important;
+                max-height: calc(100vh - 130px) !important;
+                max-height: calc(100dvh - 130px) !important;
+                object-fit: contain;
+                border-radius: 6px; border: 1px solid #795548;
+            }
+        </style>
+        <div style="box-sizing:border-box; display:flex; flex-direction:column; background:#2d241e; border:1px solid #5d4037; border-radius:14px; width:100%; min-width:0; max-width:600px; max-height:100%; padding:12px; color:white; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
+            <div style="flex:1 1 auto; min-height:0; min-width:0; overflow:auto; -webkit-overflow-scrolling:touch; font-size:16px; line-height:1.6; margin-bottom:12px;">
                 ${contenido}
             </div>
-            <button onclick="document.getElementById('modal-extra').remove()" style="background:#ff9800; border:none; padding:14px 25px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Tancar ✖️</button>
+            <button onclick="document.getElementById('modal-extra').remove()" style="flex:none; margin:0; background:#ff9800; border:none; padding:14px 25px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Tancar ✖️</button>
         </div>
     `;
 }
