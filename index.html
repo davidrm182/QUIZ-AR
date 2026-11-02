@@ -4,231 +4,632 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0F1A14">
     <title>Opos Agent Rural - Privat</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Aplica el tema guardat abans de pintar res (evita el parpelleig fosc → clar) -->
+    <script>
+        try {
+            if (localStorage.getItem('cerebroTema') === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.querySelector('meta[name="theme-color"]').setAttribute('content', '#F6F7F3');
+            }
+        } catch (e) {}
+    </script>
 
     <style>
+        /* =====================================================================
+           TEMES: fosc (per defecte, "Bosc") i clar. Només canvien les variables.
+           ===================================================================== */
         :root {
-            --bg: #1a3c1a;
-            --card: #2d2419;
-            --text: #e8e8e8;
-            --accent: #ffcc00;
+            color-scheme: dark;
+            --bg: #0F1A14;
+            --surface: #16241B;
+            --surface2: #1F3326;
+            --line: #2A4232;
+            --line-soft: #223629;
+            --text: #E9EFE6;
+            --muted: #9DB0A2;
+            --letter: #B9CCBE;
+            --cta: #F2B134;
+            --cta-ink: #1A1205;
+            --moss: #2F6B3F;
+            --moss-ink: #F4FAF1;
+            --ok-bg: #16351F;
+            --ok-line: #4FA566;
+            --ok-ink: #7FD394;
+            --ok-badge: #4FA566;
+            --ok-badge-ink: #08140C;
+            --ko-bg: #391A19;
+            --ko-line: #D9645A;
+            --ko-ink: #F29A92;
+            --ko-badge: #D9645A;
+            --ko-badge-ink: #240B09;
+            --info: #8EC1F0;
+            --info-bg: #122231;
+            --info-line: #27425C;
+            --info-ring: rgba(142, 193, 240, .55);
+            --fav: #F2B134;
+            --fav-bg: #2A2410;
+            --fav-line: #F2B134;
+            --score: #F2B134;
+            --bar: #F2B134;
+            --check: #F2B134;
+            --sync-bg: #14291B;
+            --sync-line: #28543A;
+            --sync-ink: #A9DDB4;
+            --warn-bg: #2B2210;
+            --warn-line: #5A4513;
+            --warn-ink: #F2C879;
+            --error-ink: #F29A92;
         }
+
+        :root[data-theme="light"] {
+            color-scheme: light;
+            --bg: #F6F7F3;
+            --surface: #FFFFFF;
+            --surface2: #E8EDE4;
+            --line: #CBD4C6;
+            --line-soft: #DCE2D7;
+            --text: #14201A;
+            --muted: #5A6B60;
+            --letter: #4A5A50;
+            --cta: #1E5A3C;
+            --cta-ink: #FFFFFF;
+            --moss: #25663F;
+            --moss-ink: #FFFFFF;
+            --ok-bg: #E4F4E8;
+            --ok-line: #2E8B57;
+            --ok-ink: #1F7A47;
+            --ok-badge: #237A49;
+            --ok-badge-ink: #FFFFFF;
+            --ko-bg: #FCE9E6;
+            --ko-line: #C0392B;
+            --ko-ink: #B03225;
+            --ko-badge: #C0392B;
+            --ko-badge-ink: #FFFFFF;
+            --info: #1D5A91;
+            --info-bg: #EAF3FB;
+            --info-line: #BBD6EE;
+            --info-ring: rgba(29, 90, 145, .45);
+            --fav: #8A5A00;
+            --fav-bg: #FDF0D5;
+            --fav-line: #E3B54A;
+            --score: #1E5A3C;
+            --bar: #1E5A3C;
+            --check: #1E5A3C;
+            --sync-bg: #E4F4E8;
+            --sync-line: #BFE2C9;
+            --sync-ink: #14532D;
+            --warn-bg: #FDF0D5;
+            --warn-line: #F0D79B;
+            --warn-ink: #6B4600;
+            --error-ink: #B03225;
+        }
+
+        /* =====================================================================
+           BASE
+           ===================================================================== */
+        * { box-sizing: border-box; }
+        html { background: var(--bg); }
 
         body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             max-width: 600px;
-            margin: auto;
-            padding: 20px;
+            margin: 0 auto;
+            padding: 24px 18px 48px;
             background: var(--bg);
             color: var(--text);
+            -webkit-font-smoothing: antialiased;
         }
 
-        h1, h3 {
-            text-align: center;
-            color: #ff9800;
+        h1, h2, h3 {
+            font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+            font-weight: 700;
             text-transform: lowercase;
-            margin-bottom: 15px;
+            letter-spacing: -.015em;
+            margin: 0;
+            color: var(--text);
+        }
+        h1 { font-size: 27px; }
+        h2 { font-size: 20px; }
+
+        p { margin: 0; }
+        hr { border: 0; height: 1px; background: var(--line-soft); margin: 8px 0 4px; }
+        button { font-family: inherit; margin: 0; }
+
+        .oculto { display: none !important; }
+
+        .card { display: flex; flex-direction: column; gap: 14px; }
+
+        .ico {
+            width: 20px; height: 20px; flex: none;
+            fill: none; stroke: currentColor; stroke-width: 1.8;
+            stroke-linecap: round; stroke-linejoin: round;
         }
 
-        .card {
-            background: var(--card);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-            border: 2px solid #5d4037;
-            margin-bottom: 20px;
+        .sec-label {
+            font-size: 11px; font-weight: 600; line-height: 1;
+            letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
         }
 
-        .oculto {
-            display: none !important;
+        /* =====================================================================
+           BOTONS
+           ===================================================================== */
+        .btn {
+            display: flex; align-items: center; gap: 12px;
+            width: 100%; min-height: 56px; padding: 0 18px;
+            border: 0; border-radius: 16px;
+            font: 600 16px/1.2 'Inter', system-ui, sans-serif;
+            text-align: left; cursor: pointer;
+            transition: filter .15s, transform .05s;
+        }
+        .btn:hover { filter: brightness(1.06); }
+        .btn:active { transform: scale(.99); }
+        .btn:disabled { opacity: .55; cursor: default; filter: none; transform: none; }
+        .btn-izq { display: flex; align-items: center; gap: 12px; }
+
+        .btn-cta { background: var(--cta); color: var(--cta-ink); justify-content: center; }
+        .btn-outline { background: transparent; color: var(--cta); border: 1.5px solid var(--cta); justify-content: center; }
+
+        .btn-hero { min-height: 78px; font-size: 18px; justify-content: space-between; }
+        .btn-hero .loseta {
+            width: 44px; height: 44px; border-radius: 14px;
+            background: var(--cta-ink); color: var(--cta);
+            display: grid; place-items: center;
+        }
+        .btn-hero .loseta .ico { width: 22px; height: 22px; }
+
+        .btn-moss { background: var(--moss); color: var(--moss-ink); min-height: 72px; justify-content: space-between; }
+        .pastilla {
+            font-size: 12.5px; font-weight: 600; white-space: nowrap;
+            background: rgba(255, 255, 255, .16); padding: 6px 11px; border-radius: 999px;
         }
 
-        input[type="password"], select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            background: #3e3123;
-            color: white;
-            border: 1px solid #5d4037;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-            font-size: 16px;
+        .rejilla-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .btn-tile {
+            flex-direction: column; align-items: flex-start; justify-content: space-between;
+            min-height: 96px; padding: 16px;
+            background: var(--surface); border: 1px solid var(--line);
+            color: var(--text); font-size: 15px;
         }
-
-        button {
-            display: block;
-            width: 100%;
-            padding: 16px;
-            margin: 10px 0;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            background: #5d4037;
-            color: white;
-            transition: 0.2s;
-        }
-
-        button:hover {
-            background: #795548;
-        }
-
-        .btn-check {
-            background: #ff9800 !important;
-            color: #1a1a1a !important;
-        }
+        .btn-tile .ico { color: var(--fav); }
+        .btn-tile .nom { display: flex; align-items: baseline; gap: 8px; }
+        .btn-tile small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
 
         .btn-fav {
-            background: #4a4a4a !important;
-            color: white !important;
-            margin-top: 10px;
+            background: transparent; border: 1px solid var(--line); color: var(--text);
+            font-size: 15px; justify-content: space-between;
+        }
+        .btn-fav .ico { color: var(--fav); }
+        .contador {
+            min-width: 28px; height: 26px; padding: 0 8px; border-radius: 999px;
+            background: var(--surface2); color: var(--fav);
+            font: 700 13px/26px 'Inter', sans-serif; text-align: center;
         }
 
         .btn-mini {
-            width: auto;
-            display: inline-block;
-            padding: 5px 10px;
-            font-size: 11px;
-            background: #444;
-            margin: 0 2px;
+            height: 30px; padding: 0 14px; border-radius: 999px;
+            border: 1px solid var(--line); background: transparent; color: var(--letter);
+            font: 600 12px 'Inter', sans-serif; cursor: pointer;
+        }
+        .btn-mini:hover { border-color: var(--cta); }
+
+        .btn-tema {
+            width: 40px; height: 40px; flex: none; padding: 0;
+            border-radius: 12px; border: 1px solid var(--line);
+            background: var(--surface); color: var(--muted);
+            display: grid; place-items: center; cursor: pointer;
+        }
+        .btn-tema:hover { color: var(--text); }
+        .btn-tema .ico-luna { display: none; }
+        :root[data-theme="light"] .btn-tema .ico-sol { display: none; }
+        :root[data-theme="light"] .btn-tema .ico-luna { display: block; }
+
+        .btn:focus-visible, .btn-mini:focus-visible, .btn-tema:focus-visible,
+        .ctl:focus-visible, .opcion:focus-visible, .ojo:focus-visible {
+            outline: 2px solid var(--cta); outline-offset: 2px;
         }
 
-        label {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            background: #3e3123;
-            margin: 6px 0;
-            border-radius: 8px;
-            border: 1px solid #5d4037;
-            font-size: 14px;
-            cursor: pointer;
+        /* =====================================================================
+           CAMPS, SELECTORS I INTERRUPTORS
+           ===================================================================== */
+        input[type="password"] {
+            width: 100%; height: 58px; padding: 0 16px;
+            border-radius: 16px; border: 1px solid var(--line);
+            background: var(--surface); color: var(--text);
+            text-align: center; font-size: 22px; letter-spacing: .5em;
+            font-family: 'Inter', sans-serif;
+        }
+        input[type="password"]::placeholder { color: var(--muted); letter-spacing: .3em; }
+        input[type="password"]:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+
+        .campo { position: relative; }
+        .campo select {
+            appearance: none; -webkit-appearance: none;
+            width: 100%; height: 52px; padding: 0 44px 0 16px;
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--line); border-radius: 14px;
+            font: 500 15px 'Inter', sans-serif;
+        }
+        .campo select:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+        .campo .ico { position: absolute; right: 14px; top: 16px; pointer-events: none; color: var(--muted); }
+
+        .opcion-switch {
+            display: flex; align-items: center; justify-content: space-between; gap: 14px;
+            padding: 12px 14px; background: var(--surface);
+            border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+        }
+        .opcion-switch .txt { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; line-height: 1.25; }
+        .opcion-switch .txt small { font-size: 12px; font-weight: 500; color: var(--muted); }
+        .switch {
+            appearance: none; -webkit-appearance: none;
+            flex: none; position: relative; margin: 0;
+            width: 46px; height: 28px; border-radius: 99px;
+            background: var(--surface2); border: 1px solid var(--line);
+            cursor: pointer; transition: background .15s, border-color .15s;
+        }
+        .switch::after {
+            content: ""; position: absolute; top: 3px; left: 3px;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--muted); transition: transform .15s, background .15s;
+        }
+        .switch:checked { background: var(--cta); border-color: var(--cta); }
+        .switch:checked::after { transform: translateX(18px); background: var(--cta-ink); }
+        .switch:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+
+        /* =====================================================================
+           PANTALLA D'ACCÉS
+           ===================================================================== */
+        .pin { min-height: calc(100vh - 72px); justify-content: center; gap: 18px; position: relative; }
+        .pin .btn-tema { position: absolute; top: 0; right: 0; }
+        .pin-cap { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 6px; text-align: center; }
+        .pin-cap h1 { font-size: 30px; }
+        .pin-cap p { font-size: 15px; color: var(--muted); }
+        .pin-icono {
+            width: 64px; height: 64px; border-radius: 20px;
+            background: var(--surface2); color: var(--cta);
+            display: grid; place-items: center;
+        }
+        .pin-icono .ico { width: 28px; height: 28px; }
+        .error { text-align: center; color: var(--error-ink); font-weight: 600; }
+
+        /* =====================================================================
+           INICI
+           ===================================================================== */
+        .cab { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+        .cab h1 { flex: 1; }
+        .logo {
+            width: 40px; height: 40px; flex: none; border-radius: 12px;
+            background: var(--surface2); color: var(--cta);
+            display: grid; place-items: center;
+        }
+        .sec-cab { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+        .sec-cab .botons { display: flex; gap: 6px; }
+        .lista-temas { display: flex; flex-direction: column; gap: 6px; }
+        .fila-tema {
+            display: flex; align-items: center; gap: 12px;
+            min-height: 48px; padding: 0 14px;
+            background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+            font-size: 14px; color: var(--text); cursor: pointer;
+        }
+        .fila-tema input { width: 18px; height: 18px; margin: 0; accent-color: var(--check); flex: none; }
+        .fila-tema:has(input:checked) { border-color: var(--cta); }
+        .opciones-estudi { display: flex; flex-direction: column; gap: 8px; }
+
+        /* =====================================================================
+           PREGUNTA
+           ===================================================================== */
+        #pantalla-quiz { gap: 18px; }
+        #pregunta { display: flex; flex-direction: column; gap: 16px; }
+        .q-top { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px; }
+        .q-tema {
+            text-align: center; font-size: 11.5px; font-weight: 600; line-height: 1.3;
+            letter-spacing: .12em; text-transform: uppercase; color: var(--cta);
+        }
+        .ojo {
+            width: 36px; height: 36px; padding: 0; border-radius: 10px;
+            border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+            display: grid; place-items: center; cursor: pointer;
+        }
+        .ojo[aria-pressed="true"] { color: var(--cta); border-color: var(--cta); }
+        .q-prog { display: flex; justify-content: space-between; align-items: baseline; }
+        .q-num { font-size: 15px; font-weight: 700; }
+        .q-num span { color: var(--muted); font-weight: 500; }
+        .q-nota { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+        .q-nota b { color: var(--score); font-size: 15px; letter-spacing: 0; }
+        .barra { height: 6px; border-radius: 99px; background: var(--line-soft); }
+        .barra > div { height: 100%; border-radius: 99px; background: var(--bar); transition: width .25s; }
+
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chips.centrado { justify-content: center; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            height: 28px; padding: 0 10px; border-radius: 999px;
+            font: 600 12.5px 'Inter', sans-serif;
+            background: var(--surface); border: 1px solid var(--line);
+        }
+        .chip .ico { width: 14px; height: 14px; }
+        .c-ok { color: var(--ok-ink); }
+        .c-ko { color: var(--ko-ink); }
+        .c-neutro { color: var(--muted); }
+        .c-racha { color: var(--fav); }
+        .c-dies { color: var(--letter); }
+        .c-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
+
+        .info-srs { display: flex; gap: 8px; flex-wrap: wrap; transition: opacity .25s; }
+        .info-srs.srs-oculta { visibility: hidden; opacity: 0; }
+
+        .q-texto { font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--text); }
+
+        #opciones { display: flex; flex-direction: column; gap: 10px; }
+        .opcion {
+            display: flex; align-items: center; gap: 14px;
+            width: 100%; min-height: 64px; padding: 12px 14px;
+            background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+            color: var(--text); font: 500 15px/1.35 'Inter', sans-serif;
+            text-align: left; cursor: pointer;
+        }
+        .op-texto { flex: 1; min-width: 0; }
+        .letra {
+            flex: none; width: 32px; height: 32px; border-radius: 10px;
+            background: var(--surface2); color: var(--letter);
+            display: grid; place-items: center; font-size: 13px; font-weight: 700;
+        }
+        .op-icono { flex: none; display: grid; place-items: center; }
+        .opcion.ok { background: var(--ok-bg); border-color: var(--ok-line); }
+        .opcion.ok .letra { background: var(--ok-badge); color: var(--ok-badge-ink); }
+        .opcion.ok .op-icono { color: var(--ok-ink); }
+        .opcion.ko { background: var(--ko-bg); border-color: var(--ko-line); }
+        .opcion.ko .letra { background: var(--ko-badge); color: var(--ko-badge-ink); }
+        .opcion.ko .op-icono { color: var(--ko-ink); }
+        .opcion.elegida { border-color: var(--cta); }
+        .opcion.elegida .letra { background: var(--cta); color: var(--cta-ink); }
+
+        .controles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
+        .ctl {
+            height: 56px; padding: 0; border-radius: 16px;
+            border: 1px solid var(--line); background: var(--surface); color: var(--text);
+            display: grid; place-items: center; cursor: pointer;
+        }
+        .ctl.p { background: var(--cta); border-color: var(--cta); color: var(--cta-ink); }
+        .ctl:disabled { opacity: .4; cursor: default; }
+        .ctl.cargando { opacity: .5; }
+        .ctl.fav-on { border-color: var(--fav-line); background: var(--fav-bg); color: var(--fav); }
+        .ctl.fav-on .ico { fill: currentColor; }
+        /* La lupa es ressalta quan has fallat: és el millor moment per llegir l'explicació */
+        .ctl.enfasis { border: 2px solid var(--info); background: var(--info-bg); color: var(--info); }
+        .ctl.pulso { animation: pulso 1.4s ease-out 3; }
+        @keyframes pulso {
+            0%   { box-shadow: 0 0 0 0 var(--info-ring); }
+            70%  { box-shadow: 0 0 0 12px transparent; }
+            100% { box-shadow: 0 0 0 0 transparent; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .ctl.pulso { animation: none; }
+            .barra > div, .info-srs { transition: none; }
         }
 
-        input[type="checkbox"] {
-            margin-right: 12px;
-            transform: scale(1.2);
+        /* =====================================================================
+           RESULTAT
+           ===================================================================== */
+        #pantalla-final { gap: 20px; }
+        #resultado { display: flex; flex-direction: column; gap: 18px; text-align: center; }
+        .res-nota {
+            font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+            font-weight: 700; font-size: 92px; line-height: 1.05; letter-spacing: -.03em;
+            color: var(--score);
         }
-
-        #opciones {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        .res-stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; text-align: left; }
+        .stat {
+            background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+            padding: 14px 12px; display: flex; flex-direction: column; gap: 6px;
         }
-
-        hr {
-            border: 0;
-            border-top: 1px solid #5d4037;
-            margin: 20px 0;
+        .stat span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+        .stat span .ico { width: 14px; height: 14px; }
+        .stat b { font-size: 28px; font-weight: 700; }
+        .sync-msg {
+            display: flex; align-items: center; gap: 12px; text-align: left;
+            padding: 14px; border-radius: 14px;
+            background: var(--info-bg); border: 1px solid var(--info-line); color: var(--info);
+            font-size: 13.5px; font-weight: 600; line-height: 1.35;
         }
+        .sync-msg.ok { background: var(--sync-bg); border-color: var(--sync-line); color: var(--sync-ink); }
+        .sync-msg.aviso { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
 
-        /* AJUSTE PARA LOS 4 BOTONES DE ICONOS */
-        #contenedor-controles button {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0; 
-            width: 100%;
+        /* =====================================================================
+           MODAL DE LA LUPA (info extra). Sempre fosc: el contingut ve del Sheet i està pensat per a fons fosc.
+           Les imatges s'ajusten sempre a la finestra (ample i alt), sense scroll i amb el botó Tancar visible.
+           ===================================================================== */
+        #modal-extra {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, .85);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; padding: 10px;
+        }
+        .modal-caja {
+            display: flex; flex-direction: column;
+            background: #16241B; border: 1px solid #2A4232; border-radius: 14px;
+            width: 100%; min-width: 0; max-width: 600px; max-height: 100%;
+            padding: 12px; color: #E9EFE6; box-shadow: 0 8px 25px rgba(0, 0, 0, .6);
+        }
+        .modal-contenido {
+            flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto;
+            -webkit-overflow-scrolling: touch; font-size: 16px; line-height: 1.6; margin-bottom: 12px;
+        }
+        .modal-cerrar {
+            flex: none; width: 100%; padding: 14px 25px; border: 0; border-radius: 10px;
+            background: #F2B134; color: #1A1205; font-size: 16px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        #modal-extra img {
+            display: block; margin: 0 auto;
+            width: auto !important; height: auto !important;
+            max-width: min(100%, calc(100vw - 52px)) !important;
+            max-height: calc(100vh - 130px) !important;
+            max-height: calc(100dvh - 130px) !important;
+            object-fit: contain;
+            border-radius: 6px; border: 1px solid #2A4232;
         }
     </style>
 </head>
 
 <body>
 
-    <div id="pantalla-bloqueo" class="card" style="margin-top:50px;">
-        <h1>🔒 accés restringit</h1>
-        <p style="text-align:center">introdueix el codi d'agent</p>
-        <input type="password" id="pin-input" placeholder="****">
-        <button onclick="validarPin()" class="btn-check">entrar</button>
-        <p id="error-pin" class="oculto" style="color:#ff4444;text-align:center;">codi incorrecte</p>
+    <div id="pantalla-bloqueo" class="card pin">
+        <button type="button" class="btn-tema" onclick="alternarTema()" aria-label="Canviar entre tema fosc i clar" title="Tema fosc / clar">
+            <svg class="ico ico-sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
+            <svg class="ico ico-luna" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>
+        </button>
+        <div class="pin-cap">
+            <div class="pin-icono">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            </div>
+            <h1>accés restringit</h1>
+            <p>introdueix el codi d'agent</p>
+        </div>
+        <input type="password" id="pin-input" placeholder="****" aria-label="codi d'agent">
+        <button onclick="validarPin()" class="btn btn-cta">entrar</button>
+        <p id="error-pin" class="oculto error">codi incorrecte</p>
     </div>
 
     <div id="contingut-protegit" class="oculto">
 
         <div id="pantalla-inicio" class="card">
-            <h1>opos agent rural</h1>
+            <div class="cab">
+                <div class="logo">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14"/><path d="M5 19c3-4 6-6 9-8"/></svg>
+                </div>
+                <h1>opos agent rural</h1>
+                <button type="button" class="btn-tema" onclick="alternarTema()" aria-label="Canviar entre tema fosc i clar" title="Tema fosc / clar">
+                    <svg class="ico ico-sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
+                    <svg class="ico ico-luna" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>
+                </button>
+            </div>
 
-            <!-- BOTÓN DEL NUEVO SISTEMA DE MEMORIA ESPACIADA -->
-            <button id="btn-srs" onclick="prepararRepasoInteligente()" style="background:#673ab7 !important; color:white !important; border-radius:10px; margin-bottom: 20px; font-size:18px;">
-                🧠 Repàs Intel·ligent
+            <!-- BOTÓ DEL SISTEMA DE MEMÒRIA ESPAIADA -->
+            <button id="btn-srs" onclick="prepararRepasoInteligente()" class="btn btn-cta btn-hero">
+                <span class="btn-izq">
+                    <span class="loseta">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    </span>
+                    Repàs Intel·ligent
+                </span>
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
             </button>
+
+            <!-- OPCIONS D'ESTUDI (es recorden en aquest dispositiu) -->
+            <div class="opciones-estudi">
+                <label class="opcion-switch" for="opt-info-srs">
+                    <span class="txt">Info SRS abans de respondre
+                        <small>Ratxa, fallades i interval de cada pregunta</small>
+                    </span>
+                    <input type="checkbox" role="switch" class="switch" id="opt-info-srs" checked onchange="guardarOpcion('infoSRS', this.checked)">
+                </label>
+                <label class="opcion-switch" for="opt-cegues">
+                    <span class="txt">Simulacres a cegues
+                        <small>Sense correcció ni comptadors fins al final, com a l'examen</small>
+                    </span>
+                    <input type="checkbox" role="switch" class="switch" id="opt-cegues" onchange="guardarOpcion('cegues', this.checked)">
+                </label>
+            </div>
+
             <hr>
 
             <!-- SELECTOR DE DIFICULTAT I SIMULACRES -->
-            <div style="margin-bottom: 15px;">
-                <label style="background: transparent; border: none; padding: 0; font-weight: bold; font-size: 14px;">Dificultat dels Simulacres:</label>
-                <select id="selector-dificultad" style="margin-top: 5px;">
-                    <option value="tots">🔀 Mixt / Tots els nivells (Aleatori)</option>
-                    <option value="facil">🟢 Fàcil (80% assequibles / 20% febles)</option>
-                    <option value="mitja">🟡 Mitjà (Equilibrat 50% / 50%)</option>
-                    <option value="dificil">🔴 Difícil (Exigent 70% febles / 30% base)</option>
+            <div class="sec-label">dificultat dels simulacres</div>
+            <div class="campo">
+                <select id="selector-dificultad" aria-label="Dificultat dels simulacres">
+                    <option value="tots">Mixt / Tots els nivells (Aleatori)</option>
+                    <option value="facil">Fàcil (80% assequibles / 20% febles)</option>
+                    <option value="mitja">Mitjà (Equilibrat 50% / 50%)</option>
+                    <option value="dificil">Difícil (Exigent 70% febles / 30% base)</option>
                 </select>
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
             </div>
 
-            <button onclick="prepararSimulacro('oficial', this, document.getElementById('selector-dificultad').value)" class="btn-check" style="background:#2e7d32 !important; color:white !important; margin-bottom: 10px;">
-                🎯 Simulacre Oficial (80 preg.)
+            <button onclick="prepararSimulacro('oficial', this, document.getElementById('selector-dificultad').value)" class="btn btn-moss">
+                <span class="btn-izq">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg>
+                    Simulacre Oficial
+                </span>
+                <span class="pastilla">80 preg.</span>
             </button>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <button onclick="prepararSimulacro('light', this, document.getElementById('selector-dificultad').value)" class="btn-check" style="background:#43a047 !important; color:white !important; margin: 0;">
-                    🌗 Light (~43 preg.)
+
+            <div class="rejilla-2">
+                <button onclick="prepararSimulacro('light', this, document.getElementById('selector-dificultad').value)" class="btn btn-tile">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+                    <span class="nom">Light <small>47 preg.</small></span>
                 </button>
-                <button onclick="prepararSimulacro('ultra', this, document.getElementById('selector-dificultad').value)" class="btn-check" style="background:#66bb6a !important; color:white !important; margin: 0;">
-                    ⚡ Ultra (25 preg.)
+                <button onclick="prepararSimulacro('ultra', this, document.getElementById('selector-dificultad').value)" class="btn btn-tile">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>
+                    <span class="nom">Ultra <small>25 preg.</small></span>
                 </button>
             </div>
             <!-- FI SELECTOR DE DIFICULTAT I SIMULACRES -->
-            
-            <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn-fav">⭐ Fer test de preferides (<span id="count-favs">0</span>)</button>
-            
+
+            <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn btn-fav">
+                <span class="btn-izq">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9z"/></svg>
+                    Fer test de preferides
+                </span>
+                <span class="contador" id="count-favs">0</span>
+            </button>
 
             <hr>
 
-            <h3>temari general</h3>
-            <div style="text-align: center; margin-bottom: 10px;">
-                <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
-                <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
+            <div class="sec-cab">
+                <h2>temari general</h2>
+                <div class="botons">
+                    <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
+                    <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
+                </div>
             </div>
-            <div id="lista-general"></div>
+            <div id="lista-general" class="lista-temas"></div>
 
-            <h3 style="margin-top: 20px;">temari específic</h3>
-            <div style="text-align: center; margin-bottom: 10px;">
-                <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
-                <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
+            <div class="sec-cab" style="margin-top: 14px;">
+                <h2>temari específic</h2>
+                <div class="botons">
+                    <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
+                    <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
+                </div>
             </div>
-            <div id="lista-especifico"></div>
+            <div id="lista-especifico" class="lista-temas"></div>
 
             <hr>
 
-            <h3>configuració de test ràpid</h3>
-            <label style="background: transparent; border: none; padding: 0;">Número de preguntes:</label>
-            <select id="num-preguntas">
-                <option value="10">10 preguntes</option>
-                <option value="25">25 preguntes</option>
-                <option value="50">50 preguntes</option>
-                <option value="80">80 preguntes</option>
-            </select>
+            <h2>configuració de test ràpid</h2>
+            <div class="sec-label">número de preguntes</div>
+            <div class="campo">
+                <select id="num-preguntas" aria-label="Número de preguntes">
+                    <option value="10">10 preguntes</option>
+                    <option value="25">25 preguntes</option>
+                    <option value="50">50 preguntes</option>
+                    <option value="80">80 preguntes</option>
+                </select>
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
 
-            <button onclick="prepararQuiz()" class="btn-check">comencem test ràpid</button>
+            <button onclick="prepararQuiz()" class="btn btn-outline">comencem test ràpid</button>
         </div>
 
         <div id="pantalla-quiz" class="card oculto">
-            <div id="pregunta" style="margin-bottom:20px;"></div>
+            <div id="pregunta"></div>
             <div id="opciones"></div>
             <div id="contenedor-controles"></div>
         </div>
 
         <div id="pantalla-final" class="card oculto">
-            <div id="resultado" style="font-weight:bold; text-align:center; margin-bottom:15px;"></div>
-            <button onclick="location.reload()" class="btn-check">nou test</button>
+            <div id="resultado"></div>
+            <button onclick="location.reload()" class="btn btn-cta">nou test</button>
         </div>
 
     </div>
 
-    <!-- VERSIÓN ACTUALIZADA A 6.0 -->
-    <script src="motor.js?v=6.1"></script>
+    <!-- VERSIÓ 6.2: nou aspecte (Bosc) + tema clar -->
+    <script src="motor.js?v=6.2"></script>
 </body>
 
 </html>

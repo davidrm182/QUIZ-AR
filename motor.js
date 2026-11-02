@@ -20,7 +20,80 @@ let aciertos = 0;
 let fallos = 0;
 let blancas = 0; 
 let respondida = false;
-let esSimulacroLargo = false; 
+let esSimulacroLargo = false;
+let modoCiegas = false; // simulacre "a cegues": sense correcció ni comptadors fins al final (només si s'activa a l'inici)
+
+// --- INTERFÍCIE: opcions d'estudi, tema i icones (res d'això toca el SRS) ---
+const MOSTRAR_LETRAS = true; // lletres A–D davant de cada opció (true/false)
+const CLAVE_TEMA = 'cerebroTema';           // 'light' | 'dark'
+const CLAVE_OPCION = 'cerebroOpc_';         // + infoSRS | cegues  ('1' / '0')
+const OPCIONES_DEFECTO = { infoSRS: true, cegues: false };
+
+const ICONOS = {
+    check:    '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    x:        '<path d="M6 6l12 12M18 6 6 18"/>',
+    circulo:  '<circle cx="12" cy="12" r="7"/>',
+    racha:    '<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .3 1.3 1 2 2 2-1-3 0-5 1-8z"/>',
+    reloj:    '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    nova:     '<path d="M12 4v4M12 16v4M4 12h4M16 12h4M7 7l2.5 2.5M14.5 14.5 17 17M17 7l-2.5 2.5M9.5 14.5 7 17"/>',
+    aviso:    '<path d="M12 4 3 19.5h18z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+    atras:    '<path d="M19 12H5m6-6-6 6 6 6"/>',
+    adelante: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+    estrella: '<path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9z"/>',
+    lupa:     '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    ojo:      '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
+    ojoOff:   '<path d="M3 3l18 18"/><path d="M10.6 5.7A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3.2 3.9M6.6 6.9A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9.5 9.5 0 0 0 4.2-1"/><path d="M9.9 10A2.8 2.8 0 0 0 14 14"/>',
+    nube:     '<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5 3.75 3.75 0 0 1 17.25 18z"/><path d="m9.5 13.5 2 2 3.5-3.5"/>'
+};
+function ico(nombre) {
+    return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONOS[nombre] || ''}</svg>`;
+}
+
+function leerOpcion(nombre) {
+    try {
+        const v = localStorage.getItem(CLAVE_OPCION + nombre);
+        if (v === '1') return true;
+        if (v === '0') return false;
+    } catch (e) {}
+    return OPCIONES_DEFECTO[nombre];
+}
+function guardarOpcion(nombre, valor) {
+    try { localStorage.setItem(CLAVE_OPCION + nombre, valor ? '1' : '0'); } catch (e) {}
+    const caja = document.getElementById(nombre === 'infoSRS' ? 'opt-info-srs' : 'opt-cegues');
+    if (caja) caja.checked = !!valor; // manté sincronitzat l'interruptor de l'inici
+}
+function iniciarOpciones() {
+    const info = document.getElementById('opt-info-srs');
+    const cegues = document.getElementById('opt-cegues');
+    if (info) info.checked = leerOpcion('infoSRS');
+    if (cegues) cegues.checked = leerOpcion('cegues');
+}
+
+function alternarTema() {
+    const arrel = document.documentElement;
+    const aClaro = arrel.getAttribute('data-theme') !== 'light';
+    if (aClaro) arrel.setAttribute('data-theme', 'light'); else arrel.removeAttribute('data-theme');
+    try { localStorage.setItem(CLAVE_TEMA, aClaro ? 'light' : 'dark'); } catch (e) {}
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', aClaro ? '#F6F7F3' : '#0F1A14'); // color de la barra del navegador al mòbil
+}
+
+// Info SRS (ratxa, fallades, interval): visible, o amagada fins que es respon. Mai en mode a cegues.
+function aplicarVisibilidadInfoSRS() {
+    const verInfo = leerOpcion('infoSRS');
+    const caja = document.getElementById('info-srs');
+    if (caja) caja.classList.toggle('srs-oculta', !verInfo && !respondida);
+    const ojo = document.getElementById('btn-ojo');
+    if (ojo) {
+        ojo.setAttribute('aria-pressed', verInfo ? 'true' : 'false');
+        ojo.title = verInfo ? 'Amagar la info SRS fins a respondre' : 'Mostrar la info SRS abans de respondre';
+        ojo.innerHTML = ico(verInfo ? 'ojo' : 'ojoOff');
+    }
+}
+function alternarInfoSRS() {
+    guardarOpcion('infoSRS', !leerOpcion('infoSRS'));
+    aplicarVisibilidadInfoSRS();
+}
 
 // --- CONSTANTS I ESTAT DEL SRS ---
 const DIA = 24 * 60 * 60 * 1000;
@@ -246,10 +319,10 @@ function generarChecks(){
     if(!gen || !esp) return;
     gen.innerHTML = ""; esp.innerHTML = "";
     TEMAS_GENERAL.forEach(t=>{
-        gen.innerHTML += `<label><input type="checkbox" class="tema-check gen" value="${t.id}">${t.nombre}</label>`;
+        gen.innerHTML += `<label class="fila-tema"><input type="checkbox" class="tema-check gen" value="${t.id}"><span>${t.nombre}</span></label>`;
     });
     TEMAS_ESPECIFICO.forEach(t=>{
-        esp.innerHTML += `<label><input type="checkbox" class="tema-check esp" value="${t.id}">${t.nombre}</label>`;
+        esp.innerHTML += `<label class="fila-tema"><input type="checkbox" class="tema-check esp" value="${t.id}"><span>${t.nombre}</span></label>`;
     });
 }
 
@@ -388,7 +461,8 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
 }
 
 async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
-    esSimulacroLargo = (tipo === 'oficial'); 
+    esSimulacroLargo = (tipo === 'oficial');
+    modoCiegas = leerOpcion('cegues'); // només els simulacres poden anar a cegues
 
     if (botonClicado) {
         botonClicado.innerText = "⏳ Carregant...";
@@ -425,6 +499,7 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
 
 async function prepararQuiz(){
     esSimulacroLargo = false;
+    modoCiegas = false;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
     if(temasSeleccionados.length === 0){ alert("Tria algun tema"); return; }
@@ -448,6 +523,7 @@ async function prepararQuiz(){
 
 function prepararQuizFavs(){
     esSimulacroLargo = false;
+    modoCiegas = false;
     if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
@@ -499,8 +575,16 @@ function pintarResultado(idElegido, idCorrecto) {
     opcionesActuales.forEach((o, i) => {
         const btn = document.getElementById(`btn-opcion-${i}`);
         if (!btn) return;
-        if (o.id === idCorrecto) btn.style.background = "#2e7d32";
-        else if (o.id === idElegido) btn.style.background = "#c62828";
+        const icono = document.getElementById(`icon-opcion-${i}`);
+        btn.classList.remove('ok', 'ko', 'elegida');
+        if (icono) icono.innerHTML = "";
+        // A cegues no es revela res: només es marca quina has triat
+        if (modoCiegas) {
+            if (o.id === idElegido) btn.classList.add('elegida');
+            return;
+        }
+        if (o.id === idCorrecto) { btn.classList.add('ok'); if (icono) icono.innerHTML = ico('check'); }
+        else if (o.id === idElegido) { btn.classList.add('ko'); if (icono) icono.innerHTML = ico('x'); }
     });
 }
 
@@ -518,54 +602,71 @@ function mostrarPregunta(){
     const notaNum = ((aciertos - (fallos * 0.25)) / preguntas.length) * 10;
     const nota = Math.max(0, notaNum).toFixed(2).replace(".",",");
 
-    let contadoresHTML = `<span style="color:#4CAF50">✅ ${aciertos}</span> | <span style="color:#f44336">❌ ${fallos}</span>`;
-    if (esSimulacroLargo) {
-        contadoresHTML += ` | <span style="color:#9e9e9e">⚪ ${blancas}</span>`;
-    }
-
-    let statsPregunta = cerebroSRS[q.id];
-    let infoSRSHTML = "";
-
-    if (!statsPregunta) {
-        infoSRSHTML = `<div style="font-size:12px; color:#64b5f6; text-align:center; margin-bottom:10px; font-weight:bold; letter-spacing: 1px;">🆕 PREGUNTA NOVA</div>`;
+    // Comptadors i nota: a cegues no es mostren fins al final
+    let contadoresHTML, notaHTML = "";
+    if (modoCiegas) {
+        contadoresHTML = `<span class="chip c-info">${ico('ojoOff')}a cegues</span>`;
     } else {
-        let rachaTxt = statsPregunta.racha > 0 ? `🔥 ${statsPregunta.racha}` : `⚠️`;
-        let fallosTxt = statsPregunta.fallosTotales > 0 ? ` | ❌ ${statsPregunta.fallosTotales} veg.` : ``;
-        let intervaloTxt = ` | ⏳ +${statsPregunta.intervalo} dies`;
-
-        infoSRSHTML = `<div style="font-size:11.5px; color:#b0bec5; text-align:center; margin-bottom:10px; font-weight:500;">
-            ${rachaTxt}${fallosTxt}${intervaloTxt}
-        </div>`;
+        contadoresHTML = `<span class="chip c-ok">${ico('check')}${aciertos}</span><span class="chip c-ko">${ico('x')}${fallos}</span>`;
+        if (esSimulacroLargo) contadoresHTML += `<span class="chip c-neutro">${ico('circulo')}${blancas}</span>`;
+        notaHTML = `<span class="q-nota">nota <b>${nota}</b></span>`;
     }
+
+    // Info del SRS (ratxa, fallades, interval): es pot amagar fins a respondre; a cegues no hi és
+    let infoSRSHTML = "";
+    if (!modoCiegas) {
+        const statsPregunta = cerebroSRS[q.id];
+        if (!statsPregunta) {
+            infoSRSHTML = `<span class="chip c-info">${ico('nova')}pregunta nova</span>`;
+        } else {
+            const rachaChip = statsPregunta.racha > 0
+                ? `<span class="chip c-racha">${ico('racha')}${statsPregunta.racha}</span>`
+                : `<span class="chip c-ko">${ico('aviso')}</span>`;
+            const fallosChip = statsPregunta.fallosTotales > 0
+                ? `<span class="chip c-ko">${ico('x')}${statsPregunta.fallosTotales} veg.</span>` : ``;
+            const intervaloChip = `<span class="chip c-dies">${ico('reloj')}+${statsPregunta.intervalo} dies</span>`;
+            infoSRSHTML = rachaChip + fallosChip + intervaloChip;
+        }
+        infoSRSHTML = `<div id="info-srs" class="info-srs">${infoSRSHTML}</div>`;
+    }
+
+    const botoOjo = modoCiegas ? `<span></span>` : `<button id="btn-ojo" class="ojo" onclick="alternarInfoSRS()" aria-pressed="true"></button>`;
+    const progreso = Math.round(((indice + 1) / preguntas.length) * 100);
 
     document.getElementById("pregunta").innerHTML = `
-        <div style="font-size:12px; color:#ffcc00; text-align:center; opacity:0.8; margin-bottom:5px;">${q.tema}</div>
+        <div class="q-top"><span></span><span class="q-tema">${q.tema}</span>${botoOjo}</div>
+        <div class="q-prog"><span class="q-num">${indice + 1}<span> / ${preguntas.length}</span></span>${notaHTML}</div>
+        <div class="barra"><div style="width:${progreso}%"></div></div>
+        <div class="chips">${contadoresHTML}</div>
         ${infoSRSHTML}
-        <div style="font-size:14px; margin-bottom:15px; text-align:center;">
-            ${indice + 1}/${preguntas.length} | ${contadoresHTML} | NOTA: ${nota}
-        </div>
-        <div style="text-align:center; font-size:18px; line-height:1.4;">${q.pregunta}</div>`;
+        <p class="q-texto">${q.pregunta}</p>`;
 
     // El botó rep l'ÍNDEX de l'opció (abans rebia el text escapat dins de l'HTML i es trencava amb certs caràcters)
     let html = "";
     opcionesActuales.forEach((o, i) => {
-        html += `<button id="btn-opcion-${i}" onclick="verificarRespuesta(${i})" style="width:100%; margin:8px 0; padding:18px; background:#3e3123; color:white; border-radius:12px; border:1px solid #5d4037; text-align:left; display:flex; justify-content:space-between; align-items:center;">
-            <span class="texto-opcion" style="max-width:85%">${o.texto}</span><span id="icon-opcion-${i}"></span></button>`;
+        const letra = MOSTRAR_LETRAS ? `<span class="letra">${"ABCD"[i] || ""}</span>` : "";
+        html += `<button id="btn-opcion-${i}" class="opcion" onclick="verificarRespuesta(${i})">${letra}<span class="texto-opcion op-texto">${o.texto}</span><span id="icon-opcion-${i}" class="op-icono"></span></button>`;
     });
     document.getElementById("opciones").innerHTML = html;
 
     document.getElementById("contenedor-controles").innerHTML = `
-        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:25px;">
-            <button onclick="anterior()" style="padding:15px 0; background:#5d4037; border-radius:10px; font-size:20px;">⬅️</button>
-            <button id="btn-fav" onclick="toggleFavoritoCloud()" style="padding:15px 0; background:#4a4a4a; border-radius:10px; font-size:20px; border:2px solid transparent;">⭐</button>
-            <button id="btn-extra" onclick="mostrarInfoExtra()" disabled style="padding:15px 0; background:#5d4037; border-radius:10px; font-size:20px;">🔍</button>
-            <button onclick="siguiente()" style="padding:15px 0; background:#ff9800; border-radius:10px; font-size:20px;">➡️</button>
+        <div class="controles">
+            <button class="ctl" onclick="anterior()" aria-label="Anterior">${ico('atras')}</button>
+            <button id="btn-fav" class="ctl" onclick="toggleFavoritoCloud()" aria-label="Preferida">${ico('estrella')}</button>
+            <button id="btn-extra" class="ctl" onclick="mostrarInfoExtra()" disabled aria-label="Informació extra">${ico('lupa')}</button>
+            <button class="ctl p" onclick="siguiente()" aria-label="Següent">${ico('adelante')}</button>
         </div>`;
     actualizarBotonFav();
+    aplicarVisibilidadInfoSRS();
 
     if (respondida) {
         pintarResultado(previa.elegida, q.correcta);
-        document.getElementById("btn-extra").disabled = false;
+        // A cegues la lupa (que revelaria la resposta) queda bloquejada durant tot el simulacre
+        if (!modoCiegas) {
+            const extra = document.getElementById("btn-extra");
+            extra.disabled = false;
+            if (!previa.acierto) extra.classList.add('enfasis'); // fallada: la lupa es ressalta
+        }
     }
 }
 
@@ -583,7 +684,12 @@ function verificarRespuesta(indiceBoton) {
 
     // Només es registra al SRS la 1a resposta: després la pregunta queda bloquejada
     actualizarSRS(q.id, acierto);
-    document.getElementById("btn-extra").disabled = false;
+    aplicarVisibilidadInfoSRS(); // si la info estava amagada fins a respondre, ara es mostra
+    if (!modoCiegas) {
+        const extra = document.getElementById("btn-extra");
+        extra.disabled = false;
+        if (!acierto) extra.classList.add('enfasis', 'pulso'); // fallada: la lupa es ressalta (i polseja 3 cops)
+    }
 }
 
 // 6. FAVORITOS CLOUD
@@ -593,7 +699,7 @@ async function toggleFavoritoCloud(){
     const existe = favoritosCloud.some(f => f.pregunta === q.pregunta);
     const action = existe ? "remove" : "add";
     
-    btn.innerText = "⏳"; btn.disabled = true;
+    btn.classList.add('cargando'); btn.disabled = true;
 
     if (action === "add") favoritosCloud.push(q);
     else favoritosCloud = favoritosCloud.filter(f => f.pregunta !== q.pregunta);
@@ -614,6 +720,7 @@ async function toggleFavoritoCloud(){
         actualizarBotonFav();
         const contador = document.getElementById("count-favs");
         if(contador) contador.innerText = favoritosCloud.length;
+        btn.classList.remove('cargando');
         btn.disabled = false;
     }, 500); 
 }
@@ -622,14 +729,8 @@ function actualizarBotonFav(){
     const btn = document.getElementById("btn-fav");
     if(!btn || !preguntas[indice]) return;
     const existe = favoritosCloud.some(f => f.pregunta === preguntas[indice].pregunta);
-    if (existe) {
-        btn.style.border = "2px solid #ffcc00"; 
-        btn.style.background = "#5d5d5d"; 
-    } else {
-        btn.style.border = "2px solid transparent";
-        btn.style.background = "#4a4a4a";
-    }
-    btn.innerText = "⭐";
+    btn.classList.toggle('fav-on', existe);
+    btn.setAttribute('aria-pressed', existe ? 'true' : 'false');
 }
 
 function anterior(){ if(indice > 0){ indice--; mostrarPregunta(); } }
@@ -654,28 +755,35 @@ async function final(){
     recalcularContadores();
 
     const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
-    let extraHTML = "";
-    if (esSimulacroLargo) extraHTML = ` | ⚪ ${blancas} en blanc`;
+    const statBlanc = esSimulacroLargo
+        ? `<div class="stat"><span class="c-neutro">${ico('circulo')}en blanc</span><b>${blancas}</b></div>` : "";
+    const etiquetaCiegas = modoCiegas
+        ? `<div class="chips centrado"><span class="chip c-info">${ico('ojoOff')}simulacre a cegues</span></div>` : "";
 
     document.getElementById("resultado").innerHTML = `
-        <h2 style="color:#ff9800;">Resultat: ${nota}</h2>
-        <p>✅ ${aciertos} correctes | ❌ ${fallos} errors${extraHTML}</p>
-        <p id="msg-sync" style="font-size:13px; color:#64b5f6; margin-top:20px; font-weight:bold;">
-            ⏳ Sincronitzant cervell amb el núvol...
-        </p>`;
+        <div class="sec-label">resultat</div>
+        <div class="res-nota">${nota}</div>
+        ${etiquetaCiegas}
+        <div class="res-stats">
+            <div class="stat"><span class="c-ok">${ico('check')}correctes</span><b>${aciertos}</b></div>
+            <div class="stat"><span class="c-ko">${ico('x')}errors</span><b>${fallos}</b></div>
+            ${statBlanc}
+        </div>
+        <p id="msg-sync" class="sync-msg">${ico('reloj')}<span>Sincronitzant cervell amb el núvol...</span></p>`;
 
     // Missatge REAL: només diu "guardat" si la núvol ha confirmat els últims repassos
     const ok = await sincronizarSRSCloud({ verificar: true });
     const msg = document.getElementById("msg-sync");
     if (!msg) return;
     if (ok) {
-        msg.innerHTML = "☁️ Progrés guardat i verificat al núvol!";
+        msg.className = "sync-msg ok";
+        msg.innerHTML = ico('nube') + "<span>Progrés guardat i verificat al núvol!</span>";
     } else if (!navigator.onLine) {
-        msg.style.color = "#ffb74d";
-        msg.innerHTML = "📴 Sense connexió: el progrés queda guardat al mòbil i es sincronitzarà en tornar a entrar amb connexió.";
+        msg.className = "sync-msg aviso";
+        msg.innerHTML = ico('aviso') + "<span>Sense connexió: el progrés queda guardat al mòbil i es sincronitzarà en tornar a entrar amb connexió.</span>";
     } else {
-        msg.style.color = "#ffb74d";
-        msg.innerHTML = "⚠️ No he pogut confirmar el desat al núvol. El progrés queda guardat al mòbil i es reintentarà en entrar.";
+        msg.className = "sync-msg aviso";
+        msg.innerHTML = ico('aviso') + "<span>No he pogut confirmar el desat al núvol. El progrés queda guardat al mòbil i es reintentarà en entrar.</span>";
     }
 }
 
@@ -788,8 +896,9 @@ async function prepararRepasoInteligente() {
     }
 
     const btn = document.getElementById("btn-srs");
+    const contenidoOriginal = btn ? btn.innerHTML : "";
     if(btn) { btn.innerText = "⏳ Analitzant 25 temes..."; btn.disabled = true; }
-    const restaurarBoto = () => { if(btn) { btn.innerText = "🧠 Repàs Intel·ligent"; btn.disabled = false; } };
+    const restaurarBoto = () => { if(btn) { btn.innerHTML = contenidoOriginal; btn.disabled = false; } };
 
     const todosLosTemas = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id);
 
@@ -844,6 +953,7 @@ async function prepararRepasoInteligente() {
         }
 
         esSimulacroLargo = false;
+        modoCiegas = false;
         iniciarTest();
 
     } catch (e) {
@@ -940,30 +1050,17 @@ function mostrarInfoExtra() {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'modal-extra';
-        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; padding:10px; box-sizing:border-box;";
         document.body.appendChild(modal);
     }
 
-    // Les imatges sempre s'ajusten a la finestra (ample i alt), sense scroll i amb el botó Tancar visible.
-    // !important perquè mani sobre qualsevol style inline de la cel·la.
+    // L'aspecte del modal (i l'ajust de les imatges a la finestra) és al CSS de l'index.html
     modal.innerHTML = `
-        <style>
-            #modal-extra img {
-                display: block; margin: 0 auto;
-                width: auto !important; height: auto !important;
-                max-width: min(100%, calc(100vw - 52px)) !important;
-                max-height: calc(100vh - 130px) !important;
-                max-height: calc(100dvh - 130px) !important;
-                object-fit: contain;
-                border-radius: 6px; border: 1px solid #795548;
-            }
-        </style>
-        <div style="box-sizing:border-box; display:flex; flex-direction:column; background:#2d241e; border:1px solid #5d4037; border-radius:14px; width:100%; min-width:0; max-width:600px; max-height:100%; padding:12px; color:white; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
-            <div style="flex:1 1 auto; min-height:0; min-width:0; overflow:auto; -webkit-overflow-scrolling:touch; font-size:16px; line-height:1.6; margin-bottom:12px;">
+        <div class="modal-caja">
+            <div class="modal-contenido">
                 ${contenido}
             </div>
-            <button onclick="document.getElementById('modal-extra').remove()" style="flex:none; margin:0; background:#ff9800; border:none; padding:14px 25px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Tancar ✖️</button>
+            <button class="modal-cerrar" onclick="document.getElementById('modal-extra').remove()">Tancar ${ico('x')}</button>
         </div>
     `;
 }
-window.onload = () => { generarChecks(); };
+window.onload = () => { generarChecks(); iniciarOpciones(); };
