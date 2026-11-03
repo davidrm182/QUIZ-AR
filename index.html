@@ -26,12 +26,14 @@
         :root {
             color-scheme: dark;
             --bg: #1E3A2B;
-            --surface: #27493A;
-            --surface2: #325B49;
-            --line: #4A7A62;
-            --line-soft: #3D6652;
+            --bw: 1.5px;            /* gruix de les vores de botons i targetes */
+            --star-off: #A9C2B3;    /* vora de l'estrella quan NO és preferida */
+            --surface: #33604D;
+            --surface2: #356654;
+            --line: #B79F4D;
+            --line-soft: #4C8069;
             --text: #E9EFE6;
-            --muted: #BACDBF;
+            --muted: #CBDCD0;
             --letter: #CFE0D4;
             --cta: #F2B134;
             --cta-ink: #1A1205;
@@ -70,6 +72,8 @@
 
         :root[data-theme="light"] {
             color-scheme: light;
+            --bw: 1px;
+            --star-off: var(--line);
             --bg: #F6F7F3;
             --surface: #FFFFFF;
             --surface2: #E8EDE4;
@@ -196,7 +200,7 @@
         .btn-tile {
             flex-direction: column; align-items: flex-start; justify-content: space-between;
             min-height: 96px; padding: 16px;
-            background: var(--surface); border: 1px solid var(--line);
+            background: var(--surface); border: var(--bw) solid var(--line);
             color: var(--text); font-size: 15px;
         }
         .btn-tile .ico { color: var(--fav); }
@@ -204,7 +208,7 @@
         .btn-tile small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
 
         .btn-fav {
-            background: transparent; border: 1px solid var(--line); color: var(--text);
+            background: transparent; border: var(--bw) solid var(--line); color: var(--text);
             font-size: 15px; justify-content: space-between;
         }
         .btn-fav .ico { color: var(--fav); }
@@ -216,14 +220,14 @@
 
         .btn-mini {
             height: 30px; padding: 0 14px; border-radius: 999px;
-            border: 1px solid var(--line); background: transparent; color: var(--letter);
+            border: var(--bw) solid var(--line); background: transparent; color: var(--letter);
             font: 600 12px 'Inter', sans-serif; cursor: pointer;
         }
         .btn-mini:hover { border-color: var(--cta); }
 
         .btn-tema {
             width: 40px; height: 40px; flex: none; padding: 0;
-            border-radius: 12px; border: 1px solid var(--line);
+            border-radius: 12px; border: var(--bw) solid var(--line);
             background: var(--surface); color: var(--muted);
             display: grid; place-items: center; cursor: pointer;
         }
@@ -242,7 +246,7 @@
            ===================================================================== */
         input[type="password"] {
             width: 100%; height: 58px; padding: 0 16px;
-            border-radius: 16px; border: 1px solid var(--line);
+            border-radius: 16px; border: var(--bw) solid var(--line);
             background: var(--surface); color: var(--text);
             text-align: center; font-size: 22px; letter-spacing: .5em;
             font-family: 'Inter', sans-serif;
@@ -255,7 +259,7 @@
             appearance: none; -webkit-appearance: none;
             width: 100%; height: 52px; padding: 0 44px 0 16px;
             background: var(--surface); color: var(--text);
-            border: 1px solid var(--line); border-radius: 14px;
+            border: var(--bw) solid var(--line); border-radius: 14px;
             font: 500 15px 'Inter', sans-serif;
         }
         .campo select:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
@@ -264,7 +268,7 @@
         .opcion-switch {
             display: flex; align-items: center; justify-content: space-between; gap: 14px;
             padding: 12px 14px; background: var(--surface);
-            border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+            border: var(--bw) solid var(--line); border-radius: 14px; cursor: pointer;
         }
         .opcion-switch .txt { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; line-height: 1.25; }
         .opcion-switch .txt small { font-size: 12px; font-weight: 500; color: var(--muted); }
@@ -272,7 +276,7 @@
             appearance: none; -webkit-appearance: none;
             flex: none; position: relative; margin: 0;
             width: 46px; height: 28px; border-radius: 99px;
-            background: var(--surface2); border: 1px solid var(--line);
+            background: var(--surface2); border: var(--bw) solid var(--line);
             cursor: pointer; transition: background .15s, border-color .15s;
         }
         .switch::after {
@@ -316,7 +320,7 @@
         .fila-tema {
             display: flex; align-items: center; gap: 12px;
             min-height: 48px; padding: 0 14px;
-            background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+            background: var(--surface); border: var(--bw) solid var(--line); border-radius: 12px;
             font-size: 14px; color: var(--text); cursor: pointer;
         }
         .fila-tema input { width: 18px; height: 18px; margin: 0; accent-color: var(--check); flex: none; }
@@ -335,7 +339,7 @@
         }
         .ojo {
             width: 36px; height: 36px; padding: 0; border-radius: 10px;
-            border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+            border: var(--bw) solid var(--line); background: var(--surface); color: var(--muted);
             display: grid; place-items: center; cursor: pointer;
         }
         .ojo[aria-pressed="true"] { color: var(--cta); border-color: var(--cta); }
@@ -353,7 +357,7 @@
             display: inline-flex; align-items: center; gap: 6px;
             height: 28px; padding: 0 10px; border-radius: 999px;
             font: 600 12.5px 'Inter', sans-serif;
-            background: var(--surface); border: 1px solid var(--line);
+            background: var(--surface); border: var(--bw) solid var(--line);
         }
         .chip .ico { width: 14px; height: 14px; }
         .c-ok { color: var(--ok-ink); }
@@ -372,7 +376,7 @@
         .opcion {
             display: flex; align-items: center; gap: 14px;
             width: 100%; min-height: 64px; padding: 12px 14px;
-            background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+            background: var(--surface); border: var(--bw) solid var(--line); border-radius: 16px;
             color: var(--text); font: 500 15px/1.35 'Inter', sans-serif;
             text-align: left; cursor: pointer;
         }
@@ -405,13 +409,14 @@
         .controles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
         .ctl {
             height: 56px; padding: 0; border-radius: 16px;
-            border: 1px solid var(--line); background: var(--surface); color: var(--text);
+            border: var(--bw) solid var(--line); background: var(--surface); color: var(--text);
             display: grid; place-items: center; cursor: pointer;
         }
         .ctl.p { background: var(--cta); border-color: var(--cta); color: var(--cta-ink); }
         .ctl:disabled { opacity: .4; cursor: default; }
         .ctl.cargando { opacity: .5; }
         .ctl.fav-on { border-color: var(--fav-line); background: var(--fav-bg); color: var(--fav); }
+        #btn-fav:not(.fav-on) { border-color: var(--star-off); }  /* blanca fins que és preferida */
         .ctl.fav-on .ico { fill: currentColor; }
         /* La lupa es ressalta quan has fallat: és el millor moment per llegir l'explicació */
         .ctl.enfasis { border: 2px solid var(--info); background: var(--info-bg); color: var(--info); }
@@ -439,7 +444,7 @@
         }
         .res-stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; text-align: left; }
         .stat {
-            background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+            background: var(--surface); border: var(--bw) solid var(--line); border-radius: 16px;
             padding: 14px 12px; display: flex; flex-direction: column; gap: 6px;
         }
         .stat span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
@@ -463,7 +468,7 @@
         .rev-card {
             display: flex; flex-direction: column; gap: 12px;
             padding: 16px; background: var(--surface);
-            border: 1px solid var(--line); border-radius: 18px;
+            border: var(--bw) solid var(--line); border-radius: 18px;
         }
         .rev-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .rev-cab .q-tema { text-align: left; flex: 1; min-width: 0; }
