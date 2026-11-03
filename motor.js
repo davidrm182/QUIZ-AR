@@ -608,10 +608,11 @@ function mostrarPregunta(){
     // Comptadors i nota: a cegues no es mostren fins al final
     let contadoresHTML, notaHTML = "";
     if (modoCiegas) {
-        contadoresHTML = `<span class="chip c-info">${ico('ojoOff')}a cegues</span>`;
+        contadoresHTML = `<div class="bocata c-info"><span class="it">${ico('ojoOff')}a cegues</span></div>`;
     } else {
-        contadoresHTML = `<span class="chip c-ok">${ico('check')}${aciertos}</span><span class="chip c-ko">${ico('x')}${fallos}</span>`;
-        if (esSimulacroLargo) contadoresHTML += `<span class="chip c-neutro">${ico('circulo')}${blancas}</span>`;
+        let its = `<span class="it c-ok" aria-label="Encerts">${ico('check')}${aciertos}</span><span class="it c-ko" aria-label="Errors">${ico('x')}${fallos}</span>`;
+        if (esSimulacroLargo) its += `<span class="it c-neutro" aria-label="En blanc">${ico('circulo')}${blancas}</span>`;
+        contadoresHTML = `<div class="bocata">${its}</div>`;
         notaHTML = `<span class="q-nota">nota <b>${nota}</b></span>`;
     }
 
@@ -620,17 +621,16 @@ function mostrarPregunta(){
     if (!modoCiegas) {
         const statsPregunta = cerebroSRS[q.id];
         if (!statsPregunta) {
-            infoSRSHTML = `<span class="chip c-info">${ico('nova')}pregunta nova</span>`;
+            infoSRSHTML = `<div id="info-srs" class="bocata c-info"><span class="it">${ico('nova')}pregunta nova</span></div>`;
         } else {
-            const rachaChip = statsPregunta.racha > 0
-                ? `<span class="chip c-racha">${ico('racha')}${statsPregunta.racha}</span>`
-                : `<span class="chip c-ko">${ico('aviso')}</span>`;
-            const fallosChip = statsPregunta.fallosTotales > 0
-                ? `<span class="chip c-ko">${ico('x')}${statsPregunta.fallosTotales} veg.</span>` : ``;
-            const intervaloChip = `<span class="chip c-dies">${ico('reloj')}+${statsPregunta.intervalo} dies</span>`;
-            infoSRSHTML = rachaChip + fallosChip + intervaloChip;
+            const rachaIt = statsPregunta.racha > 0
+                ? `<span class="it c-racha" aria-label="Ratxa">${ico('racha')}${statsPregunta.racha}</span>`
+                : `<span class="it c-ko" aria-label="Sense ratxa">${ico('aviso')}</span>`;
+            const fallosIt = statsPregunta.fallosTotales > 0
+                ? `<span class="it c-ko" aria-label="Fallades">${ico('x')}${statsPregunta.fallosTotales}</span>` : ``;
+            const intervaloIt = `<span class="it c-dies" aria-label="Pròxim repàs">${ico('reloj')}+${statsPregunta.intervalo}</span>`;
+            infoSRSHTML = `<div id="info-srs" class="bocata">${rachaIt}${fallosIt}${intervaloIt}</div>`;
         }
-        infoSRSHTML = `<div id="info-srs" class="info-srs">${infoSRSHTML}</div>`;
     }
 
     const botoOjo = modoCiegas ? `<span></span>` : `<button id="btn-ojo" class="ojo" onclick="alternarInfoSRS()" aria-pressed="true"></button>`;
@@ -640,8 +640,7 @@ function mostrarPregunta(){
         <div class="q-top"><span></span><span class="q-tema">${q.tema}</span>${botoOjo}</div>
         <div class="q-prog"><span class="q-num">${indice + 1}<span> / ${preguntas.length}</span></span>${notaHTML}</div>
         <div class="barra"><div style="width:${progreso}%"></div></div>
-        <div class="chips">${contadoresHTML}</div>
-        ${infoSRSHTML}
+        <div class="marcadors">${contadoresHTML}${infoSRSHTML}</div>
         <p class="q-texto">${q.pregunta}</p>`;
 
     // El botó rep l'ÍNDEX de l'opció (abans rebia el text escapat dins de l'HTML i es trencava amb certs caràcters)
