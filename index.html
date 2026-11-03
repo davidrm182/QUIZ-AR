@@ -367,8 +367,18 @@
         .c-dies { color: var(--letter); }
         .c-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
 
-        .info-srs { display: flex; gap: 8px; flex-wrap: wrap; transition: opacity .25s; }
-        .info-srs.srs-oculta { visibility: hidden; opacity: 0; }
+        /* Marcadors en una sola fila: dos "bocates" (càpsules amb vora daurada), un al costat de l'altre */
+        .marcadors { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .bocata {
+            display: inline-flex; align-items: center; height: 34px; padding: 0 4px;
+            border-radius: 999px; background: var(--surface); border: var(--bw) solid var(--line);
+            font: 600 13px 'Inter', sans-serif; transition: opacity .25s;
+        }
+        .bocata .it { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; height: 20px; }
+        .bocata .it + .it { border-left: 1px solid var(--line-soft); }
+        .bocata .ico { width: 15px; height: 15px; }
+        .bocata.c-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
+        .bocata.srs-oculta { visibility: hidden; opacity: 0; }
 
         .q-texto { font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--text); }
 
@@ -428,7 +438,7 @@
         }
         @media (prefers-reduced-motion: reduce) {
             .ctl.pulso, .opcion.ok, .opcion.ko { animation: none; }
-            .barra > div, .info-srs { transition: none; }
+            .barra > div, .bocata { transition: none; }
         }
 
         /* =====================================================================
