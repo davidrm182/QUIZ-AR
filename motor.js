@@ -75,7 +75,7 @@ function alternarTema() {
     if (aClaro) arrel.setAttribute('data-theme', 'light'); else arrel.removeAttribute('data-theme');
     try { localStorage.setItem(CLAVE_TEMA, aClaro ? 'light' : 'dark'); } catch (e) {}
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', aClaro ? '#F6F7F3' : '#0F1A14'); // color de la barra del navegador al mòbil
+    if (meta) meta.setAttribute('content', aClaro ? '#F6F7F3' : '#1E3A2B'); // color de la barra del navegador al mòbil
 }
 
 // Info SRS (ratxa, fallades, interval): visible, o amagada fins que es respon. Mai en mode a cegues.
