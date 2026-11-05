@@ -212,6 +212,13 @@
             font-size: 15px; justify-content: space-between;
         }
         .btn-fav .ico { color: var(--fav); }
+
+        /* Pantalla d'exàmens oficials */
+        .lista-examens { display: flex; flex-direction: column; gap: 12px; }
+        .nota-examens { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+        .btn-examen { min-height: 76px; }
+        .btn-examen .nom-examen { display: flex; flex-direction: column; gap: 3px; }
+        .btn-examen small { font-size: 12.5px; font-weight: 500; line-height: 1.3; opacity: .8; }
         .contador {
             min-width: 28px; height: 26px; padding: 0 8px; border-radius: 999px;
             background: var(--surface2); color: var(--fav);
@@ -640,6 +647,15 @@
                 <span class="contador" id="count-favs">0</span>
             </button>
 
+            <!-- EXÀMENS OFICIALS (convocatòries anteriors) -->
+            <button id="btn-examens" onclick="abrirExamenes()" class="btn btn-fav">
+                <span class="btn-izq">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>
+                    Exàmens oficials
+                </span>
+                <span class="contador">3</span>
+            </button>
+
             <hr>
 
             <div class="sec-cab">
@@ -677,6 +693,18 @@
             <button onclick="prepararQuiz()" class="btn btn-outline">comencem test ràpid</button>
         </div>
 
+        <div id="pantalla-examens" class="card oculto">
+            <div class="cab-rev">
+                <button type="button" class="btn-tema" onclick="cerrarExamenes()" aria-label="Tornar a l'inici" title="Tornar a l'inici">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+                </button>
+                <h2>exàmens oficials</h2>
+            </div>
+            <p class="nota-examens">Les preguntes surten en l'ordre original i amb les opcions tal com van sortir a l'examen. Les anul·lades no hi són. Es poden deixar en blanc. No toquen el teu progrés ni entren al Repàs Intel·ligent.</p>
+            <div class="sec-label">tria l'examen</div>
+            <div id="lista-examenes" class="lista-examens"></div>
+        </div>
+
         <div id="pantalla-quiz" class="card oculto">
             <div id="pregunta"></div>
             <div id="opciones"></div>
@@ -702,8 +730,8 @@
 
     </div>
 
-    <!-- VERSIÓ 6.2: nou aspecte (Bosc) + tema clar -->
-    <script src="motor.js?v=6.2"></script>
+    <!-- VERSIÓ 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
+    <script src="motor.js?v=6.3"></script>
 </body>
 
 </html>

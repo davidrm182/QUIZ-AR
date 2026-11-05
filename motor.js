@@ -158,6 +158,21 @@ function getNombreTema(id){
     return t ? t.nombre : id;
 }
 
+// 1b. EXÀMENS OFICIALS (convocatòries anteriors, Model A: tots els models tenen les mateixes preguntes)
+// Cada examen és una pestanya del Sheet (ex0124, ex0123, ex0120) amb les columnes de sempre + Id, Microtema, Origen, Tipus.
+// Tipus: "puntuable" | "substitueix" (reserva que entra en lloc d'una anul·lada: compta) | "reserva" (opcional: NO compta).
+// Les anul·lades ja no hi són. Ids "exCCCC-NNN" amb el número original de pregunta (per això hi ha forats).
+// IMPORTANT: NO són a TEMAS_GENERAL / TEMAS_ESPECIFICO a propòsit: així el Repàs Intel·ligent, els simulacres
+// i el test ràpid no les carreguen mai, i actualizarSRS ignora els seus ids (l'examen no toca el progrés).
+const EXAMENES_OFICIALES = [
+    { id: "ex0124", nombre: "Convocatòria 01/24", detalle: "Model A · 8 reserves opcionals", pastilla: "80 preg." },
+    { id: "ex0123", nombre: "Convocatòria 01/23", detalle: "Model A · 5 anul·lades · 3 reserves opcionals", pastilla: "80 preg." },
+    { id: "ex0120", nombre: "Convocatòria 01/20", detalle: "Lliure accés · 1 anul·lada · 7 reserves opcionals", pastilla: "80 preg." }
+];
+// null fora dels exàmens oficials. Dins: { id, nombre, reservas: [...opcionals], enReservas: bool }
+let modoExamen = null;
+const ES_ID_EXAMEN = /^ex\d{4}-\d+$/;
+
 // 2. LOGIN Y CARGA DE FAVORITOS / SRS DESDE LA NUBE
 async function validarPin(){
     const input = document.getElementById("pin-input").value;
@@ -393,6 +408,52 @@ async function cargarPreguntas(temaId, estricto = false){
     return [];
 }
 
+// Carrega UN examen oficial MANTENINT l'ordre de les files del Sheet (l'original de l'examen). Sempre en mode estricte:
+// si falla, llança l'error (un examen carregat a mitges no serveix).
+async function cargarExamen(examId) {
+    if (!navigator.onLine) throw new Error("offline");
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${examId}&t=` + Date.now();
+    let ultimoError = null;
+
+    for (let n = 1; n <= 2; n++) {
+        try {
+            const text = await fetchTextoConTimeout(url);
+            const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+            const json = JSON.parse(jsonText);
+            if (json.status === 'error' || !json.table || !Array.isArray(json.table.rows)) {
+                throw new Error("Resposta no vàlida per a " + examId);
+            }
+            const celda = (r, i) => (r.c[i] && r.c[i].v != null) ? String(r.c[i].v) : "";
+
+            // Es filtra pel format de l'Id (no per la posició): serveix tant si el gviz s'ha menjat la capçalera com si no
+            return json.table.rows
+                .filter(r => r && r.c)
+                .map(r => {
+                    const tipus = celda(r, 10).trim().toLowerCase() || "puntuable";
+                    const origen = celda(r, 9).trim();
+                    const sufijo = tipus === 'reserva' ? ' · reserva' : (tipus === 'substitueix' ? ' · reserva que entra' : '');
+                    return {
+                        tema: (origen || examId) + sufijo, // és el que es veu a dalt de cada pregunta
+                        id: celda(r, 7).trim(),
+                        pregunta: celda(r, 0),
+                        a: celda(r, 1),
+                        b: celda(r, 2),
+                        c: celda(r, 3),
+                        d: celda(r, 4),
+                        correcta: celda(r, 5).toLowerCase().trim(),
+                        extra: celda(r, 6),
+                        tipus: tipus
+                    };
+                })
+                .filter(q => ES_ID_EXAMEN.test(q.id) && q.pregunta.length > 2);
+        } catch (e) {
+            ultimoError = e;
+            if (n < 2) await esperar(600);
+        }
+    }
+    throw ultimoError;
+}
+
 function obtenerDificultadPregunta(idPregunta) {
     const stats = cerebroSRS[idPregunta];
     if (!stats) return 'mitja';
@@ -462,7 +523,8 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
 
 async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
     esSimulacroLargo = (tipo === 'oficial');
-    modoCiegas = leerOpcion('cegues'); // només els simulacres poden anar a cegues
+    modoCiegas = leerOpcion('cegues'); // només els simulacres (i els exàmens oficials) poden anar a cegues
+    modoExamen = null;
 
     if (botonClicado) {
         botonClicado.innerText = "⏳ Carregant...";
@@ -500,6 +562,7 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
 async function prepararQuiz(){
     esSimulacroLargo = false;
     modoCiegas = false;
+    modoExamen = null;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
     if(temasSeleccionados.length === 0){ alert("Tria algun tema"); return; }
@@ -524,9 +587,79 @@ async function prepararQuiz(){
 function prepararQuizFavs(){
     esSimulacroLargo = false;
     modoCiegas = false;
+    modoExamen = null;
     if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
+    iniciarTest();
+}
+
+// --- EXÀMENS OFICIALS: pantalla de selecció, càrrega i reserves ---
+function generarExamenes() {
+    const cont = document.getElementById("lista-examenes");
+    if (!cont) return;
+    const iconoDoc = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>';
+    cont.innerHTML = EXAMENES_OFICIALES.map(ex => `
+        <button class="btn btn-moss btn-examen" onclick="prepararExamen('${ex.id}', this)">
+            <span class="btn-izq">${iconoDoc}<span class="nom-examen">${ex.nombre}<small>${ex.detalle}</small></span></span>
+            <span class="pastilla">${ex.pastilla}</span>
+        </button>`).join("");
+}
+
+function abrirExamenes() {
+    document.getElementById("pantalla-inicio").classList.add("oculto");
+    document.getElementById("pantalla-examens").classList.remove("oculto");
+    window.scrollTo(0, 0);
+}
+
+function cerrarExamenes() {
+    document.getElementById("pantalla-examens").classList.add("oculto");
+    document.getElementById("pantalla-inicio").classList.remove("oculto");
+    window.scrollTo(0, 0);
+}
+
+// Replica l'examen tal com va ser: ordre original de les preguntes (cap mezclar) i opcions en l'ordre original
+// (obtenerRespuestasMezcladas no les barreja si modoExamen). Es poden deixar en blanc (com esSimulacroLargo) i,
+// si tens activat "Simulacres a cegues", també van sense correcció fins al final.
+async function prepararExamen(examId, botonClicado) {
+    const ex = EXAMENES_OFICIALES.find(e => e.id === examId);
+    if (!ex) return;
+    if (!navigator.onLine) return alert("Necessites internet per descarregar l'examen.");
+
+    const botones = document.querySelectorAll("#pantalla-examens button");
+    const htmlOriginal = botonClicado ? botonClicado.innerHTML : "";
+    botones.forEach(b => b.disabled = true);
+    if (botonClicado) botonClicado.innerText = "⏳ Carregant...";
+    const restaurar = () => {
+        if (botonClicado) botonClicado.innerHTML = htmlOriginal;
+        botones.forEach(b => b.disabled = false);
+    };
+
+    try {
+        const filas = await cargarExamen(examId);
+        const principales = filas.filter(q => q.tipus !== 'reserva');  // puntuables + reserves que entren (compten)
+        const reservas = filas.filter(q => q.tipus === 'reserva');     // opcionals: es veuen a part i no compten
+        if (principales.length === 0) throw new Error("Examen buit");
+
+        preguntas = principales;
+        modoExamen = { id: ex.id, nombre: ex.nombre, reservas: reservas, enReservas: false };
+        esSimulacroLargo = true;
+        modoCiegas = leerOpcion('cegues');
+        restaurar();
+        iniciarTest();
+    } catch (e) {
+        console.error("Error carregant l'examen", examId, e);
+        alert("No he pogut carregar l'examen. Comprova la connexió i torna-ho a provar.");
+        restaurar();
+    }
+}
+
+// Bloc de reserves opcionals (les que NO han entrat): mateixes regles, però sense nota
+function iniciarReservasExamen() {
+    if (!modoExamen || modoExamen.reservas.length === 0) return;
+    preguntas = modoExamen.reservas;
+    modoExamen.enReservas = true;
+    document.getElementById("pantalla-final").classList.add("oculto");
     iniciarTest();
 }
 
@@ -534,6 +667,8 @@ function iniciarTest(){
     indice = 0; aciertos = 0; fallos = 0; blancas = 0; respondida = false;
     respuestasDadas = []; ordenOpciones = []; opcionesActuales = [];
     document.getElementById("pantalla-inicio").classList.add("oculto");
+    const pantallaExamens = document.getElementById("pantalla-examens");
+    if (pantallaExamens) pantallaExamens.classList.add("oculto");
     document.getElementById("pantalla-quiz").classList.remove("oculto");
     mostrarPregunta();
 }
@@ -555,7 +690,7 @@ function obtenerRespuestasMezcladas(q) {
     ].filter(o => o.texto);
     const idCorr = q.correcta;
     const textoCorr = q[idCorr];
-    mezclar(opciones);
+    if (!modoExamen) mezclar(opciones); // exàmens oficials: opcions en l'ordre original A-B-C-D
     return { opciones, textoCorr };
 }
 
@@ -613,12 +748,16 @@ function mostrarPregunta(){
         let its = `<span class="it c-ok" aria-label="Encerts">${ico('check')}${aciertos}</span><span class="it c-ko" aria-label="Errors">${ico('x')}${fallos}</span>`;
         if (esSimulacroLargo) its += `<span class="it c-neutro" aria-label="En blanc">${ico('circulo')}${blancas}</span>`;
         contadoresHTML = `<div class="bocata">${its}</div>`;
-        notaHTML = `<span class="q-nota">nota <b>${nota}</b></span>`;
+        // Reserves opcionals d'un examen: no compten a la nota
+        notaHTML = (modoExamen && modoExamen.enReservas)
+            ? `<span class="q-nota">no compta</span>`
+            : `<span class="q-nota">nota <b>${nota}</b></span>`;
     }
 
-    // Info del SRS (ratxa, fallades, interval): es pot amagar fins a respondre; a cegues no hi és
+    // Info del SRS (ratxa, fallades, interval): es pot amagar fins a respondre; a cegues no hi és.
+    // Als exàmens oficials tampoc: no toquen el SRS, així que no hi ha res a mostrar.
     let infoSRSHTML = "";
-    if (!modoCiegas) {
+    if (!modoCiegas && !modoExamen) {
         const statsPregunta = cerebroSRS[q.id];
         if (!statsPregunta) {
             infoSRSHTML = `<div id="info-srs" class="bocata c-info"><span class="it">${ico('nova')}pregunta nova</span></div>`;
@@ -633,7 +772,7 @@ function mostrarPregunta(){
         }
     }
 
-    const botoOjo = modoCiegas ? `<span></span>` : `<button id="btn-ojo" class="ojo" onclick="alternarInfoSRS()" aria-pressed="true"></button>`;
+    const botoOjo = (modoCiegas || modoExamen) ? `<span></span>` : `<button id="btn-ojo" class="ojo" onclick="alternarInfoSRS()" aria-pressed="true"></button>`;
     const progreso = Math.round(((indice + 1) / preguntas.length) * 100);
 
     document.getElementById("pregunta").innerHTML = `
@@ -758,17 +897,29 @@ async function final(){
     recalcularContadores();
 
     const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
+    const enReservas = !!(modoExamen && modoExamen.enReservas);
     const statBlanc = esSimulacroLargo
         ? `<div class="stat"><span class="c-neutro">${ico('circulo')}en blanc</span><b>${blancas}</b></div>` : "";
     const etiquetaCiegas = modoCiegas
         ? `<div class="chips centrado"><span class="chip c-info">${ico('ojoOff')}simulacre a cegues</span></div>` : "";
+    // Examen oficial: quin és i, si són les reserves opcionals, que no compten (en lloc de nota, encerts sobre el total)
+    const etiquetaExamen = modoExamen
+        ? `<div class="chips centrado"><span class="chip ${enReservas ? 'c-neutro' : 'c-info'}">${ico(enReservas ? 'aviso' : 'check')}${modoExamen.nombre}${enReservas ? ' · reserves opcionals: no compten' : ''}</span></div>` : "";
+    const valorGran = enReservas ? `${aciertos}/${preguntas.length}` : nota;
     // A cegues no has vist les correccions: al final es poden revisar els errors (i les preguntes en blanc)
     const botonRevision = (modoCiegas && fallos + blancas > 0)
         ? `<button class="btn btn-outline" onclick="mostrarRevision()">${ico('lupa')}${textoBotonRevision()}</button>` : "";
+    // Acabat l'examen: les reserves que no han entrat es poden fer a part
+    const botonReservas = (modoExamen && !enReservas && modoExamen.reservas.length > 0)
+        ? `<button class="btn btn-outline" onclick="iniciarReservasExamen()">${ico('adelante')}Reserves opcionals (${modoExamen.reservas.length}) · no compten</button>` : "";
+    // Els exàmens oficials no toquen el SRS: no hi ha res a sincronitzar
+    const pieSync = modoExamen ? ""
+        : `<p id="msg-sync" class="sync-msg">${ico('reloj')}<span>Sincronitzant cervell amb el núvol...</span></p>`;
 
     document.getElementById("resultado").innerHTML = `
         <div class="sec-label">resultat</div>
-        <div class="res-nota">${nota}</div>
+        <div class="res-nota">${valorGran}</div>
+        ${etiquetaExamen}
         ${etiquetaCiegas}
         <div class="res-stats">
             <div class="stat"><span class="c-ok">${ico('check')}correctes</span><b>${aciertos}</b></div>
@@ -776,7 +927,10 @@ async function final(){
             ${statBlanc}
         </div>
         ${botonRevision}
-        <p id="msg-sync" class="sync-msg">${ico('reloj')}<span>Sincronitzant cervell amb el núvol...</span></p>`;
+        ${botonReservas}
+        ${pieSync}`;
+
+    if (modoExamen) return;
 
     // Missatge REAL: només diu "guardat" si la núvol ha confirmat els últims repassos
     const ok = await sincronizarSRSCloud({ verificar: true });
@@ -874,6 +1028,8 @@ function urgenciaRepaso(stats, ara) {
 
 function actualizarSRS(idPregunta, acertada) {
     if (!idPregunta) { console.warn("Pregunta sense ID, no es guarda al SRS."); return; }
+    // Les preguntes dels exàmens oficials (ids "exCCCC-NNN") no entren mai al SRS, ni des de l'examen ni des de les preferides
+    if (ES_ID_EXAMEN.test(String(idPregunta))) return;
 
     let stats = cerebroSRS[idPregunta] || { racha: 0, facilidad: FACILIDAD_INICIAL, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
 
@@ -1013,6 +1169,7 @@ async function prepararRepasoInteligente() {
 
         esSimulacroLargo = false;
         modoCiegas = false;
+        modoExamen = null;
         iniciarTest();
 
     } catch (e) {
@@ -1128,4 +1285,4 @@ function mostrarInfoExtra() {
         </div>
     `;
 }
-window.onload = () => { generarChecks(); iniciarOpciones(); };
+window.onload = () => { generarChecks(); generarExamenes(); iniciarOpciones(); };
