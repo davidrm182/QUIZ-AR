@@ -597,6 +597,9 @@ function prepararQuizFavs(){
 
 // --- EXÀMENS OFICIALS: pantalla de selecció, càrrega i reserves ---
 function generarExamenes() {
+    // Comptador del botó "Exàmens oficials" de l'inici: surt de la llista, així no queda desfasat quan s'afegeix un examen
+    const contador = document.querySelector("#btn-examens .contador");
+    if (contador) contador.textContent = EXAMENES_OFICIALES.length;
     const cont = document.getElementById("lista-examenes");
     if (!cont) return;
     const iconoDoc = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>';
