@@ -159,7 +159,7 @@ function getNombreTema(id){
 }
 
 // 1b. EXÀMENS OFICIALS (convocatòries anteriors, Model A: tots els models tenen les mateixes preguntes)
-// Cada examen és una pestanya del Sheet (ex0124, ex0123, ex0120) amb les columnes de sempre + Id, Microtema, Origen, Tipus.
+// Cada examen és una pestanya del Sheet (ex0124, ex0123, ex0422, ex0120) amb les columnes de sempre + Id, Microtema, Origen, Tipus.
 // Tipus: "puntuable" | "substitueix" (reserva que entra en lloc d'una anul·lada: compta) | "reserva" (opcional: NO compta).
 // Les anul·lades ja no hi són. Ids "exCCCC-NNN" amb el número original de pregunta (per això hi ha forats).
 // IMPORTANT: NO són a TEMAS_GENERAL / TEMAS_ESPECIFICO a propòsit: així el Repàs Intel·ligent, els simulacres
@@ -167,6 +167,7 @@ function getNombreTema(id){
 const EXAMENES_OFICIALES = [
     { id: "ex0124", nombre: "Convocatòria 01/24", detalle: "Model A · 8 reserves opcionals", pastilla: "80 preg." },
     { id: "ex0123", nombre: "Convocatòria 01/23", detalle: "Model A · 5 anul·lades · 3 reserves opcionals", pastilla: "80 preg." },
+    { id: "ex0422", nombre: "Convocatòria 04/22", detalle: "Model A · 8 reserves opcionals", pastilla: "80 preg." },
     { id: "ex0120", nombre: "Convocatòria 01/20", detalle: "Lliure accés · 1 anul·lada · 7 reserves opcionals", pastilla: "80 preg." }
 ];
 // null fora dels exàmens oficials. Dins: { id, nombre, reservas: [...opcionals], enReservas: bool }
