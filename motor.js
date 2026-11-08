@@ -341,11 +341,28 @@ function generarChecks(){
     TEMAS_ESPECIFICO.forEach(t=>{
         esp.innerHTML += `<label class="fila-tema"><input type="checkbox" class="tema-check esp" value="${t.id}"><span>${t.nombre}</span></label>`;
     });
+    actualizarContadoresTemas();
 }
 
 function seleccionar(estado,clase){
     document.querySelectorAll(".tema-check."+clase).forEach(cb=>cb.checked=estado);
+    actualizarContadoresTemas();
 }
+
+// Els temaris van plegats: el comptador de cada capçalera (p. ex. "3/12") diu quants temes hi ha triats
+function actualizarContadoresTemas() {
+    for (const [clase, id] of [['gen', 'cont-sel-gen'], ['esp', 'cont-sel-esp']]) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const checks = document.querySelectorAll('.tema-check.' + clase);
+        const triats = [...checks].filter(c => c.checked).length;
+        el.textContent = `${triats}/${checks.length}`;
+        el.classList.toggle('on', triats > 0);
+    }
+}
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('tema-check')) actualizarContadoresTemas();
+});
 
 // 4. CARGA DE PREGUNTAS Y CLUSTERIZACIÓN POR DIFICULTAD
 async function fetchTextoConTimeout(url, ms = 12000) {
@@ -567,7 +584,12 @@ async function prepararQuiz(){
     modoExamen = null;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
-    if(temasSeleccionados.length === 0){ alert("Tria algun tema"); return; }
+    if(temasSeleccionados.length === 0){
+        // els temaris van plegats: s'obren perquè es vegi on triar
+        ["det-general", "det-especifico"].forEach(id => { const d = document.getElementById(id); if (d) d.open = true; });
+        alert("Tria algun tema");
+        return;
+    }
     
     const btn = document.querySelector("button[onclick='prepararQuiz()']");
     btn.innerText = "Carregant..."; btn.disabled = true;

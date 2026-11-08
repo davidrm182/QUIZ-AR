@@ -338,6 +338,30 @@
         .fila-tema input { width: 18px; height: 18px; margin: 0; accent-color: var(--check); flex: none; }
         .fila-tema:has(input:checked) { border-color: var(--cta); }
 
+        /* temaris plegables */
+        .tem-det > summary {
+            list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer;
+            min-height: 52px; padding: 0 14px;
+            background: var(--surface); border: var(--bw) solid var(--line); border-radius: 14px;
+        }
+        .tem-det > summary::-webkit-details-marker { display: none; }
+        .tem-det > summary:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+        .tem-det > summary h2 { flex: 1; margin: 0; font-size: 17px; }
+        .tem-det > summary .n {
+            min-width: 46px; height: 26px; padding: 0 9px; border-radius: 999px;
+            background: var(--surface2); color: var(--muted);
+            font: 700 12.5px/26px 'Inter', sans-serif; text-align: center;
+        }
+        .tem-det > summary .n.on { color: var(--fav); }
+        .tem-det > summary .ch {
+            width: 18px; height: 18px; flex: none; color: var(--muted); fill: none; stroke: currentColor;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s;
+        }
+        .tem-det[open] > summary .ch { transform: rotate(180deg); }
+        .tem-det[open] > summary { margin-bottom: 10px; }
+        .tem-det .sec-cab { margin: 0 0 8px; justify-content: flex-end; }
+        .tem-det + .tem-det { margin-top: 10px; }
+
         /* =====================================================================
            PREGUNTA
            ===================================================================== */
@@ -811,23 +835,36 @@
 
             <hr>
 
-            <div class="sec-cab">
-                <h2>temari general</h2>
-                <div class="botons">
-                    <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
-                    <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
+            <!-- TEMARIS PLEGABLES: tancats per defecte; el comptador diu quants n'hi ha triats -->
+            <details class="tem-det" id="det-general">
+                <summary>
+                    <h2>temari general</h2>
+                    <span class="n" id="cont-sel-gen">0/0</span>
+                    <svg class="ch" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="sec-cab">
+                    <div class="botons">
+                        <button class="btn-mini" onclick="seleccionar(true,'gen')">tots</button>
+                        <button class="btn-mini" onclick="seleccionar(false,'gen')">cap</button>
+                    </div>
                 </div>
-            </div>
-            <div id="lista-general" class="lista-temas"></div>
+                <div id="lista-general" class="lista-temas"></div>
+            </details>
 
-            <div class="sec-cab" style="margin-top: 14px;">
-                <h2>temari específic</h2>
-                <div class="botons">
-                    <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
-                    <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
+            <details class="tem-det" id="det-especifico">
+                <summary>
+                    <h2>temari específic</h2>
+                    <span class="n" id="cont-sel-esp">0/0</span>
+                    <svg class="ch" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="sec-cab">
+                    <div class="botons">
+                        <button class="btn-mini" onclick="seleccionar(true,'esp')">tots</button>
+                        <button class="btn-mini" onclick="seleccionar(false,'esp')">cap</button>
+                    </div>
                 </div>
-            </div>
-            <div id="lista-especifico" class="lista-temas"></div>
+                <div id="lista-especifico" class="lista-temas"></div>
+            </details>
 
             <hr>
 
@@ -906,7 +943,7 @@
     </div>
 
     <!-- VERSIÓ 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
-    <script src="motor.js?v=6.5"></script>
+    <script src="motor.js?v=6.6"></script>
 </body>
 
 </html>
