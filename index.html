@@ -611,10 +611,11 @@
             color: var(--text); font: 700 16px/1.15 'Inter', system-ui, sans-serif;
         }
         .tile-nou .em { font-size: 28px; line-height: 1; }
+        .tile-nou small { display: block; margin-top: 3px; min-height: 1em; font-size: 12.5px; font-weight: 500; color: var(--muted); }
 
         /* targeta ampla destacada (Exàmens oficials): mateix to que les eines, en horitzontal */
         .btn-destacat {
-            justify-content: space-between; min-height: 72px; padding: 0 16px;
+            position: relative; justify-content: space-between; min-height: 72px; padding: 0 16px;
             border: var(--bw) solid var(--cta); border-radius: 18px;
             background: color-mix(in srgb, var(--cta) 14%, var(--surface)); color: var(--text);
             font-weight: 700;
@@ -622,8 +623,11 @@
         .btn-destacat .em { font-size: 28px; line-height: 1; }
         .btn-destacat + .sec-label { margin-top: 8px; }
         .btn-destacat small { display: block; margin-top: 3px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
-        .tile-nou small { display: block; margin-top: 3px; min-height: 1em; font-size: 12.5px; font-weight: 500; color: var(--muted); }
-        .tile-nou .nou {
+        /* el comptador baixa una mica perquè l'etiqueta NOU (a dalt a la dreta) no el tapi */
+        .btn-destacat .contador { align-self: flex-end; margin-bottom: 12px; }
+
+        /* etiqueta NOU, igual a les tres targetes */
+        .tile-nou .nou, .btn-destacat .nou {
             position: absolute; top: 10px; right: 10px; padding: 5px 8px; border-radius: 999px;
             background: var(--cta); color: var(--cta-ink); font: 800 10px/1 'Inter', sans-serif; letter-spacing: .1em;
         }
@@ -771,6 +775,7 @@
 
             <!-- APARTAT: EXÀMENS OFICIALS (targeta ampla destacada) -->
             <button id="btn-examens" onclick="abrirExamenes()" class="btn btn-destacat">
+                <span class="nou">NOU</span>
                 <span class="btn-izq">
                     <span class="em">📝</span>
                     <span>Exàmens oficials<small>convocatòries anteriors</small></span>
