@@ -186,6 +186,7 @@ async function validarPin(){
         document.getElementById("pantalla-bloqueo").classList.add("oculto");
         document.getElementById("contingut-protegit").classList.remove("oculto");
         generarChecks();
+        cargarEnlaces(); // llista d'eines (Psicotècnics / Estudi); en segon pla, no frena l'entrada
         // Si l'última sessió va quedar sense confirmar al núvol, es reintenta ara (en segon pla)
         if (haySyncPendiente()) sincronizarSRSCloud({ verificar: true });
     }else{
@@ -618,6 +619,154 @@ function abrirExamenes() {
 
 function cerrarExamenes() {
     document.getElementById("pantalla-examens").classList.add("oculto");
+    document.getElementById("pantalla-inicio").classList.remove("oculto");
+    window.scrollTo(0, 0);
+}
+
+// --- EINES INTERACTIVES (Psicotècnics / Estudi) ---
+// La llista surt de la pestanya "Enllaços" del Sheet: una fila = una eina. Afegir-ne, treure'n (Actiu = NO) o
+// reordenar-ne (Ordre) es fa al Sheet, sense tocar el codi. No toca res del SRS ni de la sincronització.
+// Columnes: Pantalla | Secció | Emoji | Títol | Nota | Link | Ordre | Actiu | Destacat
+const HOJA_ENLACES = 'Enllaços';
+const CLAVE_ENLACES = 'cerebroEnlaces_v1';
+const UMBRAL_DESPLEGAT = 12; // fins a aquest nombre d'eines a una pantalla, totes les seccions surten obertes
+const ICONO_ENLACE = '<svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+const ICONO_CHEVRON = '<svg class="ch" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+let enlaces = [];            // eines ja filtrades i ordenades
+let enlacesCargados = false; // true quan hi ha dades (còpia local o Sheet)
+let enlacesError = false;    // true si no hi ha dades ni s'han pogut baixar
+
+function escapeHTML(t) {
+    return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// "Psicotècnics" / "psicotecnics" -> 'psico'; "Estudi" -> 'estudi'; qualsevol altra cosa -> null (s'ignora)
+function clavePantallaEnlace(txt) {
+    const t = String(txt || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    if (t.startsWith('psico')) return 'psico';
+    if (t.startsWith('estud')) return 'estudi';
+    return null;
+}
+
+// filas = files "crues" del gviz. Es queden només les actives amb pantalla coneguda, títol i link http(s).
+function normalizarEnlaces(filas) {
+    const celda = (r, i) => (r.c && r.c[i] && r.c[i].v != null) ? String(r.c[i].v).trim() : '';
+    const NO = /^(no|n|false|0|x|-)$/i;
+    const SI = /^(si|sí|s|yes|y|true|1)$/i;
+    return filas
+        .filter(r => r && r.c)
+        .map((r, pos) => {
+            const orden = parseFloat(celda(r, 6).replace(',', '.'));
+            return {
+                clave: clavePantallaEnlace(celda(r, 0)),
+                seccion: celda(r, 1), emoji: celda(r, 2), titulo: celda(r, 3), nota: celda(r, 4), url: celda(r, 5),
+                orden: isNaN(orden) ? Infinity : orden,
+                activo: !NO.test(celda(r, 7)),
+                destacada: SI.test(celda(r, 8)),
+                pos: pos
+            };
+        })
+        .filter(e => e.clave && e.titulo && /^https?:\/\//i.test(e.url) && e.activo)
+        .sort((a, b) => (a.orden === b.orden ? a.pos - b.pos : a.orden - b.orden));
+}
+
+function leerEnlacesLocal() {
+    try {
+        const j = JSON.parse(localStorage.getItem(CLAVE_ENLACES));
+        return (j && Array.isArray(j.enlaces)) ? j.enlaces : null;
+    } catch (e) { return null; }
+}
+function guardarEnlacesLocal(lista) {
+    try { localStorage.setItem(CLAVE_ENLACES, JSON.stringify({ ts: Date.now(), enlaces: lista })); } catch (e) { /* sense espai: no passa res */ }
+}
+
+async function pedirEnlaces() {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(HOJA_ENLACES)}&t=` + Date.now();
+    const text = await fetchTextoConTimeout(url);
+    const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    if (json.status === 'error' || !json.table || !Array.isArray(json.table.rows)) {
+        throw new Error("Resposta no vàlida per a " + HOJA_ENLACES);
+    }
+    return normalizarEnlaces(json.table.rows);
+}
+
+// Primer pinta la còpia guardada (surt a l'instant i també sense cobertura) i després la refresca des del Sheet.
+// Si el Sheet falla, es queda l'última còpia bona: mai es buida la llista per un error de xarxa.
+async function cargarEnlaces() {
+    enlacesError = false;
+    const local = leerEnlacesLocal();
+    if (local) { enlaces = local; enlacesCargados = true; }
+    pintarEnlaces();
+    if (!navigator.onLine) { enlacesError = !enlacesCargados; pintarEnlaces(); return; }
+    try {
+        enlaces = await pedirEnlaces();
+        enlacesCargados = true;
+        guardarEnlacesLocal(enlaces);
+    } catch (e) {
+        console.warn("No s'han pogut carregar les eines", e);
+        enlacesError = !enlacesCargados; // només es mostra l'error si no tenim cap còpia
+    }
+    pintarEnlaces();
+}
+
+function htmlEina(e, destacada) {
+    const nota = e.nota ? `<small>${escapeHTML(e.nota)}</small>` : '';
+    return `<a class="hb-item${destacada ? ' top' : ''}" href="${escapeHTML(e.url)}" target="_blank" rel="noopener noreferrer">` +
+        `<span class="em">${escapeHTML(e.emoji || '🔗')}</span><span class="tx">${escapeHTML(e.titulo)}${nota}</span>${ICONO_ENLACE}</a>`;
+}
+
+function pintarEnlaces() {
+    for (const clave of ['psico', 'estudi']) {
+        const cont = document.getElementById('lista-' + clave);
+        const contador = document.getElementById('cont-' + clave);
+        const nota = document.getElementById('nota-' + clave);
+        const lista = enlaces.filter(e => e.clave === clave);
+        const cuantas = lista.length === 1 ? '1 eina' : `${lista.length} eines`;
+        if (contador) contador.textContent = enlacesCargados ? cuantas : '';
+        if (nota) nota.textContent = enlacesCargados ? `${cuantas} · s’obren en una pestanya nova` : '';
+        if (!cont) continue;
+
+        if (!enlacesCargados) {
+            cont.innerHTML = enlacesError
+                ? `<p class="hb-nota">No s’ha pogut carregar la llista d’eines. ` +
+                  `<button type="button" class="btn-mini" onclick="cargarEnlaces()">Torna-ho a provar</button></p>`
+                : '<p class="hb-nota">Carregant eines…</p>';
+            continue;
+        }
+        if (!lista.length) {
+            cont.innerHTML = '<p class="hb-nota">Encara no hi ha cap eina aquí. Afegeix files a la pestanya «Enllaços» del Sheet.</p>';
+            continue;
+        }
+
+        // destacades a dalt (sense secció); la resta, per seccions en l'ordre en què apareixen
+        const destacades = lista.filter(e => e.destacada);
+        const secciones = [];
+        for (const e of lista.filter(e => !e.destacada)) {
+            const nombre = e.seccion || 'Altres';
+            let sec = secciones.find(s => s.nombre === nombre);
+            if (!sec) { sec = { nombre: nombre, items: [] }; secciones.push(sec); }
+            sec.items.push(e);
+        }
+        const desplegarTodas = lista.length <= UMBRAL_DESPLEGAT;
+        let html = '';
+        if (destacades.length) html += `<div class="hb-list">${destacades.map(e => htmlEina(e, true)).join('')}</div>`;
+        secciones.forEach((sec, i) => {
+            html += `<details class="hb-det"${(desplegarTodas || i === 0) ? ' open' : ''}>` +
+                `<summary>${escapeHTML(sec.nombre)}<span class="n">${sec.items.length}</span>${ICONO_CHEVRON}</summary>` +
+                `<div class="hb-list">${sec.items.map(e => htmlEina(e, false)).join('')}</div></details>`;
+        });
+        cont.innerHTML = html;
+    }
+}
+
+function abrirEines(clave) {
+    document.getElementById("pantalla-inicio").classList.add("oculto");
+    document.getElementById("pantalla-eines-" + clave).classList.remove("oculto");
+    window.scrollTo(0, 0);
+}
+
+function cerrarEines() {
+    document.querySelectorAll('[id^="pantalla-eines-"]').forEach(p => p.classList.add("oculto"));
     document.getElementById("pantalla-inicio").classList.remove("oculto");
     window.scrollTo(0, 0);
 }

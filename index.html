@@ -272,13 +272,15 @@
         .campo select:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
         .campo .ico { position: absolute; right: 14px; top: 16px; pointer-events: none; color: var(--muted); }
 
-        .opcion-switch {
-            display: flex; align-items: center; justify-content: space-between; gap: 14px;
-            padding: 12px 14px; background: var(--surface);
-            border: var(--bw) solid var(--line); border-radius: 14px; cursor: pointer;
+        /* Opcions d'estudi: dos xips petits, un al costat de l'altre */
+        .opc-fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .opc-chip {
+            display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 12px;
+            background: var(--surface); border: var(--bw) solid var(--line); border-radius: 14px; cursor: pointer;
+            font: 600 14px/1.1 'Inter', system-ui, sans-serif; color: var(--text);
         }
-        .opcion-switch .txt { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; line-height: 1.25; }
-        .opcion-switch .txt small { font-size: 12px; font-weight: 500; color: var(--muted); }
+        .opc-chip .em { font-size: 18px; line-height: 1; }
+        .opc-chip .tx { flex: 1; min-width: 0; white-space: nowrap; }
         .switch {
             appearance: none; -webkit-appearance: none;
             flex: none; position: relative; margin: 0;
@@ -294,6 +296,9 @@
         .switch:checked { background: var(--cta); border-color: var(--cta); }
         .switch:checked::after { transform: translateX(18px); background: var(--cta-ink); }
         .switch:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+        .opc-chip .switch { width: 38px; height: 24px; }
+        .opc-chip .switch::after { width: 16px; height: 16px; top: 3px; left: 3px; }
+        .opc-chip .switch:checked::after { transform: translateX(14px); }
 
         /* =====================================================================
            PANTALLA D'ACCÉS
@@ -332,7 +337,6 @@
         }
         .fila-tema input { width: 18px; height: 18px; margin: 0; accent-color: var(--check); flex: none; }
         .fila-tema:has(input:checked) { border-color: var(--cta); }
-        .opciones-estudi { display: flex; flex-direction: column; gap: 8px; }
 
         /* =====================================================================
            PREGUNTA
@@ -579,6 +583,84 @@
         .xd { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .xk { display: inline-block; margin: 3px 2px; padding: 5px 11px; border-radius: 999px; background: #1E3226; border: 1px solid #2A4232; font-size: 13.5px; font-weight: 700; color: #E9EFE6; }
         .xk.on { background: #F2B134; border-color: #F2B134; color: #1A1205; }
+    
+        /* =====================================================================
+           INICI PER APARTATS + EINES INTERACTIVES
+           ===================================================================== */
+        .btn-tile.mini {
+            flex-direction: row; align-items: center; justify-content: flex-start;
+            min-height: 54px; padding: 0 14px; gap: 10px;
+        }
+        .btn-tile.mini .nom { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+
+        /* apartat de simulacres, acotat (de Mixt fins a Ultra) */
+        .sim-panel {
+            display: flex; flex-direction: column; gap: 12px; padding: 14px;
+            border: var(--bw) solid var(--line); border-radius: 20px;
+            background: color-mix(in srgb, var(--surface) 30%, transparent);
+        }
+        .sim-panel .sec-label { color: var(--text); opacity: .85; }
+
+        /* eines interactives (novetat) */
+        .eines-nou { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .tile-nou {
+            position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+            gap: 16px; min-height: 108px; padding: 14px; text-align: left; cursor: pointer;
+            border-radius: 18px; border: var(--bw) solid var(--cta);
+            background: color-mix(in srgb, var(--cta) 14%, var(--surface));
+            color: var(--text); font: 700 16px/1.15 'Inter', system-ui, sans-serif;
+        }
+        .tile-nou .em { font-size: 28px; line-height: 1; }
+        .tile-nou small { display: block; margin-top: 3px; min-height: 1em; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+        .tile-nou .nou {
+            position: absolute; top: 10px; right: 10px; padding: 5px 8px; border-radius: 999px;
+            background: var(--cta); color: var(--cta-ink); font: 800 10px/1 'Inter', sans-serif; letter-spacing: .1em;
+        }
+
+        /* preferides: discret */
+        .fila-discreta { display: flex; justify-content: center; }
+        .btn-peque {
+            display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px;
+            background: transparent; border: var(--bw) dashed var(--line-soft); border-radius: 12px;
+            color: var(--muted); font: 600 13.5px/1 'Inter', system-ui, sans-serif; cursor: pointer;
+        }
+        .btn-peque .ico { width: 16px; height: 16px; }
+        .btn-peque .contador { min-width: 22px; height: 20px; font-size: 12px; line-height: 20px; padding: 0 6px; }
+
+        /* pantalles Psicotècnics / Estudi: llista d'enllaços */
+        .eines-lista { display: flex; flex-direction: column; gap: 10px; }
+        .hb-list { display: flex; flex-direction: column; gap: 10px; }
+        .hb-item {
+            display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; padding: 10px 14px;
+            border-radius: 16px; background: var(--surface); border: var(--bw) solid var(--line-soft);
+            color: var(--text); text-decoration: none; box-sizing: border-box;
+            font: 600 15px/1.25 'Inter', system-ui, sans-serif; text-align: left; cursor: pointer;
+        }
+        .hb-item:hover { filter: brightness(1.06); }
+        .hb-item:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+        .hb-item .em { width: 42px; height: 42px; flex: none; border-radius: 13px; background: var(--surface2);
+            display: grid; place-items: center; font-size: 21px; }
+        .hb-item .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .hb-item small { font-size: 12.5px; font-weight: 500; color: var(--muted); line-height: 1.25; }
+        .hb-item .ar { width: 18px; height: 18px; flex: none; color: var(--fav); fill: none; stroke: currentColor;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .hb-item.top { background: var(--moss); color: var(--moss-ink); border-color: transparent; min-height: 74px; }
+        .hb-item.top .em { background: rgba(255, 255, 255, .16); }
+        .hb-item.top small { color: var(--moss-ink); opacity: .8; }
+        .hb-item.top .ar { color: var(--moss-ink); }
+        .hb-det > summary {
+            list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer;
+            padding: 6px 2px 10px; font: 600 11px/1 'Inter', sans-serif; letter-spacing: .12em;
+            text-transform: uppercase; color: var(--muted);
+        }
+        .hb-det > summary::-webkit-details-marker { display: none; }
+        .hb-det > summary .n { margin-left: auto; min-width: 26px; height: 24px; padding: 0 8px; border-radius: 999px;
+            background: var(--surface2); color: var(--fav); font: 700 12px/24px 'Inter', sans-serif; text-align: center; letter-spacing: 0; }
+        .hb-det > summary .ch { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+        .hb-det[open] > summary .ch { transform: rotate(180deg); }
+        .hb-det[open] { margin-bottom: 6px; }
+        .hb-nota { font-size: 13.5px; line-height: 1.45; color: var(--muted); margin: 0; }
     </style>
 </head>
 
@@ -627,17 +709,13 @@
             </button>
 
             <!-- OPCIONS D'ESTUDI (es recorden en aquest dispositiu) -->
-            <div class="opciones-estudi">
-                <label class="opcion-switch" for="opt-info-srs">
-                    <span class="txt">Info SRS abans de respondre
-                        <small>Ratxa, fallades i interval de cada pregunta</small>
-                    </span>
+            <div class="opc-fila">
+                <label class="opc-chip" for="opt-info-srs" title="Info SRS abans de respondre: ratxa, fallades i interval de cada pregunta">
+                    <span class="em">📊</span><span class="tx">Info SRS</span>
                     <input type="checkbox" role="switch" class="switch" id="opt-info-srs" checked onchange="guardarOpcion('infoSRS', this.checked)">
                 </label>
-                <label class="opcion-switch" for="opt-cegues">
-                    <span class="txt">Simulacres a cegues
-                        <small>Sense correcció ni comptadors fins al final, com a l'examen</small>
-                    </span>
+                <label class="opc-chip" for="opt-cegues" title="Simulacres a cegues: sense correcció ni comptadors fins al final, com a l'examen">
+                    <span class="em">🙈</span><span class="tx">A cegues</span>
                     <input type="checkbox" role="switch" class="switch" id="opt-cegues" onchange="guardarOpcion('cegues', this.checked)">
                 </label>
             </div>
@@ -645,46 +723,42 @@
             <hr>
 
             <!-- SELECTOR DE DIFICULTAT I SIMULACRES -->
-            <div class="sec-label">dificultat dels simulacres</div>
-            <div class="campo">
-                <select id="selector-dificultad" aria-label="Dificultat dels simulacres">
-                    <option value="tots">Mixt / Tots els nivells (Aleatori)</option>
-                    <option value="facil">Fàcil (80% assequibles / 20% febles)</option>
-                    <option value="mitja">Mitjà (Equilibrat 50% / 50%)</option>
-                    <option value="dificil">Difícil (Exigent 70% febles / 30% base)</option>
-                </select>
-                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            <!-- APARTAT: SIMULACRES (de Mixt fins a Ultra) -->
+            <div class="sim-panel">
+                <div class="sec-label">simulacres · dificultat</div>
+                <div class="campo">
+                    <select id="selector-dificultad" aria-label="Dificultat dels simulacres">
+                        <option value="tots">Mixt / Tots els nivells (Aleatori)</option>
+                        <option value="facil">Fàcil (80% assequibles / 20% febles)</option>
+                        <option value="mitja">Mitjà (Equilibrat 50% / 50%)</option>
+                        <option value="dificil">Difícil (Exigent 70% febles / 30% base)</option>
+                    </select>
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+
+                <button onclick="prepararSimulacro('oficial', this, document.getElementById('selector-dificultad').value)" class="btn btn-moss">
+                    <span class="btn-izq">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg>
+                        Simulacre Oficial
+                    </span>
+                    <span class="pastilla">80 preg.</span>
+                </button>
+
+                <div class="rejilla-2">
+                    <button onclick="prepararSimulacro('light', this, document.getElementById('selector-dificultad').value)" class="btn btn-tile mini">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+                        <span class="nom">Light <small>47 preg.</small></span>
+                    </button>
+                    <button onclick="prepararSimulacro('ultra', this, document.getElementById('selector-dificultad').value)" class="btn btn-tile mini">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>
+                        <span class="nom">Ultra <small>25 preg.</small></span>
+                    </button>
+                </div>
             </div>
 
-            <button onclick="prepararSimulacro('oficial', this, document.getElementById('selector-dificultad').value)" class="btn btn-moss">
-                <span class="btn-izq">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg>
-                    Simulacre Oficial
-                </span>
-                <span class="pastilla">80 preg.</span>
-            </button>
+            <hr>
 
-            <div class="rejilla-2">
-                <button onclick="prepararSimulacro('light', this, document.getElementById('selector-dificultad').value)" class="btn btn-tile">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
-                    <span class="nom">Light <small>47 preg.</small></span>
-                </button>
-                <button onclick="prepararSimulacro('ultra', this, document.getElementById('selector-dificultad').value)" class="btn btn-tile">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>
-                    <span class="nom">Ultra <small>25 preg.</small></span>
-                </button>
-            </div>
-            <!-- FI SELECTOR DE DIFICULTAT I SIMULACRES -->
-
-            <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn btn-fav">
-                <span class="btn-izq">
-                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9z"/></svg>
-                    Fer test de preferides
-                </span>
-                <span class="contador" id="count-favs">0</span>
-            </button>
-
-            <!-- EXÀMENS OFICIALS (convocatòries anteriors) -->
+            <!-- APARTAT: EXÀMENS OFICIALS (solt) -->
             <button id="btn-examens" onclick="abrirExamenes()" class="btn btn-fav">
                 <span class="btn-izq">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>
@@ -692,6 +766,34 @@
                 </span>
                 <span class="contador">4</span>
             </button>
+
+            <hr>
+
+            <!-- APARTAT: EINES INTERACTIVES (novetat). La llista surt de la pestanya "Enllaços" del Sheet -->
+            <div class="sec-label">eines interactives</div>
+            <div class="eines-nou">
+                <button type="button" class="tile-nou" onclick="abrirEines('psico')">
+                    <span class="nou">NOU</span>
+                    <span class="em">🧩</span>
+                    <span>Psicotècnics<small id="cont-psico"></small></span>
+                </button>
+                <button type="button" class="tile-nou" onclick="abrirEines('estudi')">
+                    <span class="nou">NOU</span>
+                    <span class="em">📚</span>
+                    <span>Estudi interactiu<small id="cont-estudi"></small></span>
+                </button>
+            </div>
+
+            <hr>
+
+            <!-- APARTAT: PREFERIDES (discret) -->
+            <div class="fila-discreta">
+                <button id="btn-solo-favs" onclick="prepararQuizFavs()" class="btn-peque">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9z"/></svg>
+                    Test de preferides
+                    <span class="contador" id="count-favs">0</span>
+                </button>
+            </div>
 
             <hr>
 
@@ -728,6 +830,28 @@
             </div>
 
             <button onclick="prepararQuiz()" class="btn btn-outline">comencem test ràpid</button>
+        </div>
+
+        <div id="pantalla-eines-psico" class="card oculto">
+            <div class="cab-rev">
+                <button type="button" class="btn-tema" onclick="cerrarEines()" aria-label="Tornar a l'inici" title="Tornar a l'inici">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+                </button>
+                <h2>psicotècnics</h2>
+            </div>
+            <p class="hb-nota" id="nota-psico"></p>
+            <div id="lista-psico" class="eines-lista"></div>
+        </div>
+
+        <div id="pantalla-eines-estudi" class="card oculto">
+            <div class="cab-rev">
+                <button type="button" class="btn-tema" onclick="cerrarEines()" aria-label="Tornar a l'inici" title="Tornar a l'inici">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+                </button>
+                <h2>estudi interactiu</h2>
+            </div>
+            <p class="hb-nota" id="nota-estudi"></p>
+            <div id="lista-estudi" class="eines-lista"></div>
         </div>
 
         <div id="pantalla-examens" class="card oculto">
@@ -768,7 +892,7 @@
     </div>
 
     <!-- VERSIÓ 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
-    <script src="motor.js?v=6.4"></script>
+    <script src="motor.js?v=6.5"></script>
 </body>
 
 </html>
