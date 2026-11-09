@@ -505,11 +505,29 @@
         .sync-msg.aviso { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
 
         /* =====================================================================
-           REVISIÓ D'ERRORS (al final d'un simulacre a cegues)
+           REVISIÓ DE RESPOSTES (al final d'un simulacre a cegues)
            ===================================================================== */
         .cab-rev { display: flex; align-items: center; gap: 12px; }
         .cab-rev h2 { flex: 1; }
         .lista-rev { display: flex; flex-direction: column; gap: 14px; }
+        .filtres-rev { display: flex; flex-wrap: wrap; gap: 8px; }
+        .filtre-rev {
+            display: inline-flex; align-items: center; gap: 6px;
+            height: 32px; padding: 0 12px; border-radius: 999px;
+            border: var(--bw) solid var(--line); background: transparent; color: var(--letter);
+            font: 600 12.5px 'Inter', sans-serif; cursor: pointer;
+        }
+        .filtre-rev b { color: var(--muted); font-weight: 700; }
+        .filtre-rev:hover { border-color: var(--cta); }
+        .filtre-rev[aria-pressed="true"] {
+            border-color: var(--cta); color: var(--cta);
+            background: color-mix(in srgb, var(--cta) 12%, transparent);
+        }
+        .filtre-rev[aria-pressed="true"] b { color: inherit; }
+        .filtre-rev:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+        .rev-buit { margin: 0; text-align: center; color: var(--muted); font-size: 14px; padding: 18px 0; }
+        .lista-rev[data-filtre="errors"] .rev-card[data-estat="ok"] { display: none; }
+        .lista-rev[data-filtre="ok"] .rev-card:not([data-estat="ok"]) { display: none; }
         .rev-card {
             display: flex; flex-direction: column; gap: 12px;
             padding: 16px; background: var(--surface);
@@ -933,17 +951,23 @@
                 <button type="button" class="btn-tema" onclick="cerrarRevision()" aria-label="Tornar al resultat" title="Tornar al resultat">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
                 </button>
-                <h2>revisió d'errors</h2>
+                <h2>revisió de respostes</h2>
             </div>
             <div id="resum-revision" class="sec-label"></div>
-            <div id="lista-revision" class="lista-rev"></div>
+            <div id="filtres-revision" class="filtres-rev" role="group" aria-label="Filtrar respostes">
+                <button type="button" class="filtre-rev" data-filtre="tot" aria-pressed="true" onclick="filtrarRevision('tot')">Totes <b id="rev-n-tot">0</b></button>
+                <button type="button" class="filtre-rev" data-filtre="errors" aria-pressed="false" onclick="filtrarRevision('errors')">Errors i en blanc <b id="rev-n-err">0</b></button>
+                <button type="button" class="filtre-rev" data-filtre="ok" aria-pressed="false" onclick="filtrarRevision('ok')">Correctes <b id="rev-n-ok">0</b></button>
+            </div>
+            <p id="rev-buit" class="rev-buit oculto"></p>
+            <div id="lista-revision" class="lista-rev" data-filtre="tot"></div>
             <button onclick="cerrarRevision()" class="btn btn-cta">tornar al resultat</button>
         </div>
 
     </div>
 
     <!-- VERSIÓ 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
-    <script src="motor.js?v=6.6"></script>
+    <script src="motor.js?v=6.7"></script>
 </body>
 
 </html>
