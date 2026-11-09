@@ -1081,8 +1081,8 @@ async function final(){
     const etiquetaExamen = modoExamen
         ? `<div class="chips centrado"><span class="chip ${enReservas ? 'c-neutro' : 'c-info'}">${ico(enReservas ? 'aviso' : 'check')}${modoExamen.nombre}${enReservas ? ' · reserves opcionals: no compten' : ''}</span></div>` : "";
     const valorGran = enReservas ? `${aciertos}/${preguntas.length}` : nota;
-    // A cegues no has vist les correccions: al final es poden revisar els errors (i les preguntes en blanc)
-    const botonRevision = (modoCiegas && fallos + blancas > 0)
+    // A cegues no has vist les correccions: al final es poden revisar totes les respostes (encerts, errors i en blanc)
+    const botonRevision = modoCiegas
         ? `<button class="btn btn-outline" onclick="mostrarRevision()">${ico('lupa')}${textoBotonRevision()}</button>` : "";
     // Acabat l'examen: les reserves que no han entrat es poden fer a part
     const botonReservas = (modoExamen && !enReservas && modoExamen.reservas.length > 0)
@@ -1123,25 +1123,27 @@ async function final(){
     }
 }
 
-// --- REVISIÓ D'ERRORS (només després d'un simulacre a cegues) ---
+// --- REVISIÓ DE RESPOSTES (només després d'un simulacre a cegues): totes, amb filtre per errors / correctes ---
 function textoBotonRevision() {
-    const n = fallos + blancas;
-    if (fallos > 0 && blancas > 0) return `Revisar errors i en blanc (${n})`;
-    if (fallos > 0) return `Revisar errors (${n})`;
-    return `Revisar les en blanc (${n})`;
+    return `Revisar respostes (${preguntas.length})`;
 }
 
 function mostrarRevision() {
-    const items = [];
-    preguntas.forEach((q, i) => {
-        const r = respuestasDadas[i];
-        if (r && !r.blanca && r.acierto) return; // encertada: no cal revisar-la
-        items.push({ q: q, i: i, r: r });
-    });
+    const items = preguntas.map((q, i) => ({ q: q, i: i, r: respuestasDadas[i] }));
+    const esAcierto = (r) => !!(r && !r.blanca && r.acierto);
+    const nOk = items.filter(x => esAcierto(x.r)).length;
+    const nKo = items.filter(x => x.r && !x.r.blanca && !x.r.acierto).length;
+    const nBlanc = items.length - nOk - nKo;
 
-    document.getElementById("resum-revision").textContent = `${fallos} errors · ${blancas} en blanc`;
+    const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+    document.getElementById("resum-revision").textContent =
+        `${plural(nOk, 'correcta', 'correctes')} · ${plural(nKo, 'error', 'errors')} · ${nBlanc} en blanc`;
+    document.getElementById("rev-n-tot").textContent = items.length;
+    document.getElementById("rev-n-err").textContent = nKo + nBlanc;
+    document.getElementById("rev-n-ok").textContent = nOk;
     document.getElementById("lista-revision").innerHTML = items.map(({ q, i, r }) => {
         const elegida = r && !r.blanca ? r.elegida : null;
+        const estat = esAcierto(r) ? 'ok' : (elegida ? 'ko' : 'blanc');
         const orden = ordenOpciones[i] || obtenerRespuestasMezcladas(q).opciones; // l'ordre que vas veure al test
         const opciones = orden.map((o, k) => {
             let clases = "opcion estatica", icono = "";
@@ -1150,13 +1152,15 @@ function mostrarRevision() {
             const letra = MOSTRAR_LETRAS ? `<span class="letra">${"ABCD"[k] || ""}</span>` : "";
             return `<div class="${clases}">${letra}<span class="op-texto">${o.texto}</span><span class="op-icono">${icono}</span></div>`;
         }).join("");
-        const estado = elegida
-            ? `<span class="chip c-ko">${ico('x')}error</span>`
-            : `<span class="chip c-neutro">${ico('circulo')}en blanc</span>`;
+        const estado = estat === 'ok'
+            ? `<span class="chip c-ok">${ico('check')}correcta</span>`
+            : estat === 'ko'
+                ? `<span class="chip c-ko">${ico('x')}error</span>`
+                : `<span class="chip c-neutro">${ico('circulo')}en blanc</span>`;
         const extra = prepararContenidoExtra(q);
         const extraHTML = extra
             ? `<details class="rev-extra"><summary>${ico('lupa')}Informació extra</summary><div class="contenido">${extra}</div></details>` : "";
-        return `<article class="rev-card">
+        return `<article class="rev-card" data-estat="${estat}">
             <div class="rev-cab"><span class="q-tema">${q.tema}</span>${estado}<span class="rev-num">#${i + 1}</span></div>
             <p class="q-texto">${q.pregunta}</p>
             <div class="rev-ops">${opciones}</div>
@@ -1164,9 +1168,25 @@ function mostrarRevision() {
         </article>`;
     }).join("");
 
+    filtrarRevision('tot');
     document.getElementById("pantalla-final").classList.add("oculto");
     document.getElementById("pantalla-revision").classList.remove("oculto");
     window.scrollTo(0, 0);
+}
+
+// Filtre de la revisió: 'tot' (per defecte), 'errors' (errors + en blanc) o 'ok' (correctes). Només amaga/mostra fitxes.
+function filtrarRevision(filtro) {
+    document.getElementById("lista-revision").dataset.filtre = filtro;
+    document.querySelectorAll("#filtres-revision [data-filtre]").forEach(b =>
+        b.setAttribute("aria-pressed", b.dataset.filtre === filtro ? "true" : "false"));
+    // Si el filtre no deixa cap fitxa (p. ex. cap error), s'explica en comptes de deixar la pantalla buida
+    const n = document.querySelectorAll(
+        filtro === 'ok' ? '#lista-revision .rev-card[data-estat="ok"]'
+        : filtro === 'errors' ? '#lista-revision .rev-card:not([data-estat="ok"])'
+        : '#lista-revision .rev-card').length;
+    const buit = document.getElementById("rev-buit");
+    buit.textContent = filtro === 'ok' ? "Cap pregunta correcta." : "Cap error ni pregunta en blanc. Molt bé!";
+    buit.classList.toggle("oculto", n > 0);
 }
 
 function cerrarRevision() {
