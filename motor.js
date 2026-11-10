@@ -20,7 +20,7 @@ let aciertos = 0;
 let fallos = 0;
 let blancas = 0; 
 let respondida = false;
-let esSimulacroLargo = false;
+let esSimulacroLargo = false; // simulacres i exàmens oficials: es poden deixar preguntes en blanc (i es compta "en blanc")
 let modoCiegas = false; // simulacre "a cegues": sense correcció ni comptadors fins al final (només si s'activa a l'inici)
 
 // --- INTERFÍCIE: opcions d'estudi, tema i icones (res d'això toca el SRS) ---
@@ -541,7 +541,7 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
 }
 
 async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
-    esSimulacroLargo = (tipo === 'oficial');
+    esSimulacroLargo = true; // tots els simulacres (Oficial, Light i Ultra) es poden deixar en blanc, com un examen real
     modoCiegas = leerOpcion('cegues'); // només els simulacres (i els exàmens oficials) poden anar a cegues
     modoExamen = null;
 
@@ -988,10 +988,23 @@ function mostrarPregunta(){
 }
 
 function verificarRespuesta(indiceBoton) {
-    if (respondida) return;
     const q = preguntas[indice];
     const opcion = opcionesActuales[indiceBoton];
     if (!opcion) return;
+
+    if (respondida) {
+        // Amb correcció la resposta queda bloquejada. A cegues (com un examen en paper, sense veure si l'has encertat)
+        // es pot canviar de resposta o desmarcar-la tocant la que ja tens triada: la pregunta torna a quedar en blanc.
+        if (!modoCiegas) return;
+        const previa = respuestasDadas[indice];
+        if (previa && previa.elegida === opcion.id) {
+            delete respuestasDadas[indice];
+            respondida = false;
+            recalcularContadores();
+            pintarResultado(null, q.correcta);
+            return;
+        }
+    }
     respondida = true;
 
     const acierto = opcion.id === q.correcta;
@@ -999,8 +1012,9 @@ function verificarRespuesta(indiceBoton) {
     recalcularContadores();
     pintarResultado(opcion.id, q.correcta);
 
-    // Només es registra al SRS la 1a resposta: després la pregunta queda bloquejada
-    actualizarSRS(q.id, acierto);
+    // Amb correcció, només es registra al SRS la 1a resposta (després la pregunta queda bloquejada).
+    // A cegues la resposta encara es pot canviar: el SRS es registra al final, amb la resposta definitiva (vegeu final()).
+    if (!modoCiegas) actualizarSRS(q.id, acierto);
     aplicarVisibilidadInfoSRS(); // si la info estava amagada fins a respondre, ara es mostra
     if (!modoCiegas) {
         const extra = document.getElementById("btn-extra");
@@ -1070,6 +1084,15 @@ async function final(){
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
     recalcularContadores();
+
+    // A cegues les respostes es podien canviar fins al final: ara es registren al SRS una sola vegada, les definitives.
+    // Les en blanc no toquen el SRS (igual que abans). Els exàmens oficials no hi entren mai (actualizarSRS ho filtra).
+    if (modoCiegas) {
+        preguntas.forEach((q, i) => {
+            const r = respuestasDadas[i];
+            if (r && !r.blanca) actualizarSRS(q.id, r.acierto);
+        });
+    }
 
     const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     const enReservas = !!(modoExamen && modoExamen.enReservas);
