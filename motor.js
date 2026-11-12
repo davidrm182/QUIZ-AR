@@ -21,7 +21,7 @@ let fallos = 0;
 let blancas = 0; 
 let respondida = false;
 let esSimulacroLargo = false; // simulacres i exàmens oficials: es poden deixar preguntes en blanc (i es compta "en blanc")
-let modoCiegas = false; // simulacre "a cegues": sense correcció ni comptadors fins al final (només si s'activa a l'inici)
+let modoCiegas = false; // simulacre "a cegues": sense correcció ni comptadors d'encerts/errors fins al final (només es veu el d'en blanc; només si s'activa a l'inici)
 
 // --- INTERFÍCIE: opcions d'estudi, tema i icones (res d'això toca el SRS) ---
 const MOSTRAR_LETRAS = true; // lletres A–D davant de cada opció (true/false)
@@ -918,7 +918,9 @@ function mostrarPregunta(){
     // Comptadors i nota: a cegues no es mostren fins al final
     let contadoresHTML, notaHTML = "";
     if (modoCiegas) {
-        contadoresHTML = `<div class="bocata c-info"><span class="it">${ico('ojoOff')}a cegues</span></div>`;
+        // L'únic comptador visible a cegues és el d'en blanc: només diu quantes n'has deixat, no revela cap encert ni error
+        const enBlanc = esSimulacroLargo ? `<span class="it" aria-label="En blanc">${ico('circulo')}${blancas}</span>` : "";
+        contadoresHTML = `<div class="bocata c-info"><span class="it">${ico('ojoOff')}a cegues</span>${enBlanc}</div>`;
     } else {
         let its = `<span class="it c-ok" aria-label="Encerts">${ico('check')}${aciertos}</span><span class="it c-ko" aria-label="Errors">${ico('x')}${fallos}</span>`;
         if (esSimulacroLargo) its += `<span class="it c-neutro" aria-label="En blanc">${ico('circulo')}${blancas}</span>`;
