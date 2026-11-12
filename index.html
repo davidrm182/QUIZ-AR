@@ -526,6 +526,75 @@
         .filtre-rev[aria-pressed="true"] b { color: inherit; }
         .filtre-rev:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
         .rev-buit { margin: 0; text-align: center; color: var(--muted); font-size: 14px; padding: 18px 0; }
+
+        /* =====================================================================
+           ESTADÍSTIQUES DELS SIMULACRES OFICIALS
+           ===================================================================== */
+        .st-card { border: var(--bw) solid var(--line-soft); background: var(--surface); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+        .st-card h3 { margin: 0; font: 600 13px 'Inter', sans-serif; color: var(--muted); letter-spacing: .02em; }
+        .st-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .st-kpi { border: var(--bw) solid var(--line); background: var(--surface); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .st-kpi small { font: 600 12px 'Inter', sans-serif; color: var(--muted); }
+        .st-kpi b { font: 700 28px 'Inter', sans-serif; line-height: 1.15; }
+        .st-kpi em { font: 500 12px 'Inter', sans-serif; font-style: normal; color: var(--muted); }
+        .st-kpi.hero { grid-column: 1 / -1; border-color: var(--cta); background: color-mix(in srgb, var(--cta) 10%, var(--surface)); }
+        .st-kpi.hero b { font-size: 34px; color: var(--cta); }
+        .st-up { color: var(--ok-ink) !important; }
+        .st-dn { color: var(--ko-ink) !important; }
+        .st-dots { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .st-dots i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); box-sizing: border-box; }
+        .st-dots i.on { background: var(--cta); border-color: var(--cta); }
+        .st-dots span { margin-left: 6px; font: 600 13px 'Inter', sans-serif; }
+        .st-peu { margin: 0; font: 500 12px/1.4 'Inter', sans-serif; color: var(--muted); }
+        .st-err { color: var(--ko-ink); }
+        .st-okmsg { color: var(--ok-ink); }
+        .st-tall { border: var(--bw) solid var(--ok-line); background: color-mix(in srgb, var(--ok-line) 12%, transparent); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+        .st-tall.no { border-color: var(--ko-line); background: color-mix(in srgb, var(--ko-line) 12%, transparent); }
+        .st-tall .cap { display: flex; justify-content: space-between; gap: 8px; font: 600 13px 'Inter', sans-serif; }
+        .st-tall .cap b { font-weight: 700; }
+        .st-bar { position: relative; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--text) 18%, transparent); margin: 4px 7px 0; }
+        .st-bar .marca { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--cta); }
+        .st-bar .punt { position: absolute; top: -3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ok-badge); border: 2px solid var(--bg); transform: translateX(-50%); box-sizing: border-box; }
+        .st-tall.no .st-bar .punt { background: var(--ko-badge); }
+        .st-escala { display: flex; justify-content: space-between; font: 500 11px 'Inter', sans-serif; color: var(--muted); }
+        .st-comp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        .st-comp > div { border: var(--bw) solid var(--line-soft); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); text-align: center; }
+        .st-comp small { font: 600 11px 'Inter', sans-serif; color: var(--muted); }
+        .st-comp b { font: 700 20px 'Inter', sans-serif; }
+        .st-comp em { font: 500 11px 'Inter', sans-serif; font-style: normal; color: var(--muted); }
+        .st-record { align-self: center; }
+        .st-aviso { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--info-line); background: var(--info-bg); color: var(--info); font: 500 12.5px/1.4 'Inter', sans-serif; }
+        .st-aviso .ico { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+        .st-fila { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-soft); font: 500 13px 'Inter', sans-serif; }
+        .st-fila.primera { border-top: 0; }
+        .st-fila .d { color: var(--muted); flex: 1; min-width: 0; }
+        .st-fila b { font-weight: 700; font-size: 15px; min-width: 42px; text-align: right; }
+        .st-fila .n { color: var(--muted); font-size: 12px; min-width: 78px; text-align: right; white-space: nowrap; }
+        .st-fila .m { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; border: 1px solid; white-space: nowrap; }
+        .st-fila .m.si { color: var(--ok-ink); border-color: var(--ok-line); }
+        .st-fila .m.no { color: var(--ko-ink); border-color: var(--ko-line); }
+        .st-feble { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px 10px; align-items: center; font: 500 12.5px 'Inter', sans-serif; }
+        .st-feble .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .st-feble .p { text-align: right; font-weight: 700; }
+        .st-feble .b { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--text) 14%, transparent); overflow: hidden; margin-bottom: 6px; }
+        .st-feble .b i { display: block; height: 100%; background: var(--ko-badge); }
+        .st-lock { display: flex; gap: 10px; align-items: center; font: 500 13px/1.4 'Inter', sans-serif; color: var(--muted); }
+        .st-lock .ico { width: 20px; height: 20px; flex: none; }
+        .st-filtres { display: flex; flex-wrap: wrap; gap: 8px; }
+        .st-manual summary { cursor: pointer; font: 600 13px 'Inter', sans-serif; color: var(--muted); list-style: none; }
+        .st-manual summary::-webkit-details-marker { display: none; }
+        .st-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+        .st-form label { display: flex; flex-direction: column; gap: 4px; font: 600 12px 'Inter', sans-serif; color: var(--muted); min-width: 0; }
+        .st-form label.ample { grid-column: 1 / -1; }
+        .st-form input { box-sizing: border-box; width: 100%; height: 44px; padding: 0 12px; background: var(--bg); color: var(--text); border: var(--bw) solid var(--line); border-radius: 12px; font: 500 15px 'Inter', sans-serif; color-scheme: inherit; }
+        .st-form input:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
+        .st-form .btn { grid-column: 1 / -1; }
+        .st-acces { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; border: var(--bw) solid var(--line-soft); background: transparent; color: var(--text); border-radius: 14px; padding: 10px 14px; font: 600 14px 'Inter', sans-serif; cursor: pointer; text-align: left; margin-top: 4px; }
+        .st-acces .ico { width: 18px; height: 18px; flex: none; color: var(--cta); }
+        .st-acces small { display: block; font: 500 12px 'Inter', sans-serif; color: var(--muted); margin-top: 1px; }
+        .st-acces .fl { margin-left: auto; color: var(--muted); }
+        .st-acces:hover { border-color: var(--cta); }
+        .st-acces:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
         .lista-rev[data-filtre="errors"] .rev-card[data-estat="ok"] { display: none; }
         .lista-rev[data-filtre="ok"] .rev-card:not([data-estat="ok"]) { display: none; }
         .rev-card {
@@ -811,6 +880,12 @@
                         <span class="nom">Ultra <small>25 preg.</small></span>
                     </button>
                 </div>
+
+                <button type="button" id="btn-stats" class="st-acces" onclick="abrirStats()">
+                    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/></svg>
+                    <span>Les meves estadístiques<small id="stats-resum">Carregant…</small></span>
+                    <span class="fl" aria-hidden="true">›</span>
+                </button>
             </div>
 
             <hr>
@@ -946,6 +1021,27 @@
             <button onclick="location.reload()" class="btn btn-cta">nou test</button>
         </div>
 
+        <div id="pantalla-stats" class="card oculto">
+            <div class="cab-rev">
+                <button type="button" class="btn-tema" onclick="cerrarStats()" aria-label="Tornar a l'inici" title="Tornar a l'inici">
+                    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+                </button>
+                <h2>estadístiques</h2>
+            </div>
+            <div id="stats-contingut" class="card"></div>
+            <details class="st-card st-manual">
+                <summary>+ afegir un simulacre oficial a mà</summary>
+                <div class="st-form">
+                    <label class="ample">Data i hora <input type="datetime-local" id="man-quan"></label>
+                    <label>Correctes <input type="number" inputmode="numeric" min="0" id="man-ok"></label>
+                    <label>Errors <input type="number" inputmode="numeric" min="0" id="man-ko"></label>
+                    <label>En blanc <input type="number" inputmode="numeric" min="0" id="man-bl"></label>
+                    <button type="button" class="btn btn-cta" onclick="anadirSimulacroManual()">afegir</button>
+                </div>
+                <p id="man-msg" class="st-peu">Es guarda com a Oficial · Mixt · a cegues. Han de sumar les preguntes del simulacre.</p>
+            </details>
+        </div>
+
         <div id="pantalla-revision" class="card oculto">
             <div class="cab-rev">
                 <button type="button" class="btn-tema" onclick="cerrarRevision()" aria-label="Tornar al resultat" title="Tornar al resultat">
@@ -967,7 +1063,7 @@
     </div>
 
     <!-- VERSIÓ 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
-    <script src="motor.js?v=6.9"></script>
+    <script src="motor.js?v=7.0"></script>
 </body>
 
 </html>
