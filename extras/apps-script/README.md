@@ -1,7 +1,9 @@
-# Apps Script · Simulacres
+# Apps Script (còpia de seguretat)
 
-`simulacres.gs` és el trosc que cal afegir a l'Apps Script del Sheet perquè els simulacres oficials es desin a la pestanya **Simulacres**.
-Les instruccions (5 minuts, des del PC) són a la capçalera del propi fitxer.
+`apps-script-complet.gs` és el codi complet de l'Apps Script del Sheet (favorites, repàs espaiat SRS i **simulacres oficials**).
+No conté cap clau ni PIN. Serveix de còpia de seguretat: el que està en marxa és el del Sheet (Extensions → Apps Script).
 
-Mentre no s'hagi fet això, l'app guarda els simulacres al mòbil i no envia res (la fila `sync_simulacres` de la pestanya **Config** és `NO`).
-Quan l'Apps Script ja està desplegat, es canvia `sync_simulacres` a `SI` i els pendents pugen sols.
+La part nova és l'acció `guardar_simulacre` (dins `manejarPeticion`) i el bloc «SIMULACRES OFICIALS» del final: escriu cada simulacre
+a la pestanya **Simulacres** (idempotent per ID, data i hora en hora de Madrid, nota com a fórmula).
+
+L'app només envia simulacres si a la pestanya **Config** la fila `sync_simulacres` és `SI`.
