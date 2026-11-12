@@ -174,8 +174,10 @@ function guardarSimulacre_(f) {
       f.perTema ? JSON.stringify(f.perTema) : ''
     ]]);
     hoja.getRange(fila, 2).setNumberFormat('dd/MM/yyyy HH:mm');
-    // Nota: dins d'Apps Script la fórmula s'escriu en sintaxi anglesa (0.25), encara que el Sheet estigui en català
-    hoja.getRange(fila, 11).setFormula('=MAX(0,(H' + fila + '-I' + fila + '*0.25)/G' + fila + '*10)').setNumberFormat('0.00');
+    // Nota = (correctes − errors/4) / preguntes × 10. Fórmula SENSE comes, punts ni noms de funció (ni MAX): així
+    // s'entén igual amb el Sheet en català, castellà o anglès. (L'app ja limita la nota a 0; aquí només seria negativa
+    // en un cas absurd, amb gairebé tot erroni.)
+    hoja.getRange(fila, 11).setFormula('=(H' + fila + '-I' + fila + '/4)/G' + fila + '*10').setNumberFormat('0.00');
     return resposta_({ ok: true, fila: fila });
   } finally {
     lock.releaseLock();
@@ -201,7 +203,8 @@ function provaGuardarSimulacre() {
     vist = ' | fila ' + primera.fila + ': ' + v[0] + ' · ' + v[1] + ' · nota ' + v[10];
     hoja.deleteRow(primera.fila); // la fila de prova no es queda
   }
-  var tot = primera.ok === true && !primera.duplicat && segona.ok === true && segona.duplicat === true && dolenta.ok === false;
-  Logger.log((tot ? 'RESULTAT: OK ✅ (escriu, no duplica, rebutja dades dolentes, i la fila de prova ja s\'ha esborrat)'
-                  : 'RESULTAT: FALLA ❌ ' + JSON.stringify([primera, segona, dolenta])) + vist);
+  var notaOk = /^7[.,]1[23]$/.test(vist.split('nota ')[1] || ''); // 60 ✓ i 12 ✗ sobre 80 → 7,125 → "7,13" (o "7.13")
+  var tot = primera.ok === true && !primera.duplicat && segona.ok === true && segona.duplicat === true && dolenta.ok === false && notaOk;
+  Logger.log((tot ? 'RESULTAT: OK ✅ (escriu, la nota es calcula, no duplica, rebutja dades dolentes, i la fila de prova ja s\'ha esborrat)'
+                  : 'RESULTAT: FALLA ❌ ' + JSON.stringify([primera, segona, dolenta]) + ' nota ok? ' + notaOk) + vist);
 }
