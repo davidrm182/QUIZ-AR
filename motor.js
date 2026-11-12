@@ -187,6 +187,7 @@ async function validarPin(){
         document.getElementById("contingut-protegit").classList.remove("oculto");
         generarChecks();
         cargarEnlaces(); // llista d'eines (Psicotècnics / Estudi); en segon pla, no frena l'entrada
+        iniciarEstadisticas(); // estadístiques dels simulacres oficials (còpia local primer, Sheet en segon pla)
         // Si l'última sessió va quedar sense confirmar al núvol, es reintenta ara (en segon pla)
         if (haySyncPendiente()) sincronizarSRSCloud({ verificar: true });
     }else{
@@ -544,6 +545,7 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
     esSimulacroLargo = true; // tots els simulacres (Oficial, Light i Ultra) es poden deixar en blanc, com un examen real
     modoCiegas = leerOpcion('cegues'); // només els simulacres (i els exàmens oficials) poden anar a cegues
     modoExamen = null;
+    simulacroActual = { tipus: tipo, dificultat: dificultad }; // si és l'Oficial, en acabar es registra a les estadístiques
 
     if (botonClicado) {
         botonClicado.innerText = "⏳ Carregant...";
@@ -582,6 +584,7 @@ async function prepararQuiz(){
     esSimulacroLargo = false;
     modoCiegas = false;
     modoExamen = null;
+    simulacroActual = null;
     const checks = document.querySelectorAll(".tema-check:checked");
     const temasSeleccionados = [...checks].map(t=>t.value);
     if(temasSeleccionados.length === 0){
@@ -612,6 +615,7 @@ function prepararQuizFavs(){
     esSimulacroLargo = false;
     modoCiegas = false;
     modoExamen = null;
+    simulacroActual = null;
     if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
     preguntas = [...favoritosCloud];
     mezclar(preguntas);
@@ -820,6 +824,7 @@ async function prepararExamen(examId, botonClicado) {
         modoExamen = { id: ex.id, nombre: ex.nombre, reservas: reservas, enReservas: false };
         esSimulacroLargo = true;
         modoCiegas = leerOpcion('cegues');
+        simulacroActual = null;
         restaurar();
         iniciarTest();
     } catch (e) {
@@ -1096,6 +1101,9 @@ async function final(){
         });
     }
 
+    // Simulacre Oficial: queda registrat amb data i hora (estadístiques). Només el d'80 fet de principi a fi.
+    const filaSim = registrarSimulacroOficial();
+
     const nota = Math.max(0, ((aciertos - (fallos * 0.25)) / preguntas.length) * 10).toFixed(2).replace(".", ",");
     const enReservas = !!(modoExamen && modoExamen.enReservas);
     const statBlanc = esSimulacroLargo
@@ -1126,9 +1134,11 @@ async function final(){
             <div class="stat"><span class="c-ko">${ico('x')}errors</span><b>${fallos}</b></div>
             ${statBlanc}
         </div>
+        ${htmlBloqueResultadoSim(filaSim)}
         ${botonRevision}
         ${botonReservas}
         ${pieSync}`;
+    if (filaSim) refrescarEstadisticas().then(() => enviarPendientesSimulacros()); // en segon pla: el simulacre ja és al mòbil
 
     if (modoExamen) return;
 
@@ -1218,6 +1228,417 @@ function cerrarRevision() {
     document.getElementById("pantalla-revision").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
     window.scrollTo(0, 0);
+}
+
+// =====================================================================
+// ESTADÍSTIQUES DELS SIMULACRES OFICIALS
+// Cada Simulacre Oficial (80) queda registrat amb data i hora. Font de veritat: pestanya «Simulacres» del Sheet;
+// mentrestant (o sense cobertura) es guarda al mòbil i s'hi envia quan la sincronització està activada
+// (pestanya «Config», fila sync_simulacres = SI). El tall i l'objectiu setmanal també surten de «Config».
+// =====================================================================
+const HOJA_SIMULACROS = "Simulacres";
+const HOJA_CONFIG = "Config";
+const CLAVE_SIM_LOCAL = "cerebroSimulacres_v1";       // pendents d'arribar al Sheet
+const CLAVE_SIM_NUBE = "cerebroSimulacresNube_v1";    // còpia de l'últim estat llegit del Sheet
+const CLAVE_CONFIG_SIM = "cerebroConfigSim_v1";
+const CLAVE_FILTRO_SIM = "cerebroFiltroSim";
+const PENALIZACION_ERROR = 0.25;
+const TALL_PER_DEFECTE = 7.25;
+const OBJECTIU_SETMANAL_MINIM = 3;
+const MIN_SIMULACROS_TEMA = 5;
+const MAX_FILES_HISTORIAL = 30;
+const N_SIMULACRO_OFICIAL = Object.values(PESOS_SIMULACRO).reduce((a, b) => a + b, 0);
+
+let simulacroActual = null;    // { tipus, dificultat } mentre es fa un simulacre; null en qualsevol altre test
+let simulacrosNube = [];       // llegits del Sheet
+let simulacrosLocal = [];      // pendents d'arribar al Sheet
+let configSim = { tall: TALL_PER_DEFECTE, objectiu: OBJECTIU_SETMANAL_MINIM, sync: false };
+let filtroSim = 'comparables'; // 'comparables' (Mixt · a cegues) | 'tots'
+let ultimoIntentoEnvioSim = 0;
+let ESPERA_ESCRITURA_SIM_MS = 2500; // el Sheet triga un moment a escriure abans de poder verificar-ho
+
+function leerJSONSim(clave, porDefecto) {
+    try { const j = JSON.parse(localStorage.getItem(clave)); return j == null ? porDefecto : j; } catch (e) { return porDefecto; }
+}
+function guardarJSONSim(clave, valor) {
+    try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) { /* sense espai: no passa res */ }
+}
+function numSim(v) { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? NaN : n; }
+function r2(x) { return Math.round(x * 100) / 100; }
+function fmtNota(x) { return x.toFixed(2).replace('.', ','); }
+function fmtDelta(d) { const v = r2(d); return (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNota(Math.abs(v)); }
+
+function notaSimulacro(r) { return r.n > 0 ? Math.max(0, (r.ok - r.ko * PENALIZACION_ERROR) / r.n * 10) : 0; }
+function esComparable(r) { return r.tipus === 'oficial' && r.dificultat === 'tots' && !!r.cegues; }
+function pasaTall(nota) { return r2(nota) >= r2(configSim.tall); }
+
+function sanearConfigSim(c) {
+    c = c || {};
+    const tall = numSim(c.tall), obj = Math.round(numSim(c.objectiu));
+    return {
+        tall: (!isNaN(tall) && tall > 0 && tall <= 10) ? tall : TALL_PER_DEFECTE,
+        objectiu: isNaN(obj) ? OBJECTIU_SETMANAL_MINIM : Math.max(OBJECTIU_SETMANAL_MINIM, obj),
+        sync: c.sync === true
+    };
+}
+
+function normalizarConfigSim(filas) {
+    const cfg = { tall: TALL_PER_DEFECTE, objectiu: OBJECTIU_SETMANAL_MINIM, sync: false };
+    (filas || []).forEach(r => {
+        if (!r || !r.c || !r.c[0] || r.c[0].v == null) return;
+        const clave = String(r.c[0].v).trim().toLowerCase();
+        const valor = (r.c[1] && r.c[1].v != null) ? r.c[1].v : '';
+        if (clave === 'nota_tall') cfg.tall = valor;
+        else if (clave === 'objectiu_setmanal') cfg.objectiu = valor;
+        else if (clave === 'sync_simulacres') cfg.sync = /^(si|sí|s|yes|y|true|1)$/i.test(String(valor).trim());
+    });
+    return sanearConfigSim(cfg);
+}
+
+// Llegeix la pestanya «Simulacres». Si la pestanya no existeix, gviz pot tornar-ne una altra: per això es comprova la capçalera.
+function normalizarSimulacros(json) {
+    const cols = (json.table && json.table.cols) || [];
+    const rows = (json.table && json.table.rows) || [];
+    const etiqueta = String((cols[0] && cols[0].label) || '').trim().toLowerCase();
+    const primera = String((rows[0] && rows[0].c && rows[0].c[0] && rows[0].c[0].v) || '').trim().toLowerCase();
+    if (etiqueta !== 'id' && primera !== 'id') throw new Error("La pestanya Simulacres no té el format esperat");
+    const SI = /^(si|sí|s|yes|y|true|1)$/i;
+    return rows.filter(r => r && r.c).map(r => {
+        const celda = i => (r.c[i] && r.c[i].v != null) ? r.c[i].v : '';
+        const id = String(celda(0)).trim();
+        const ts = numSim(celda(2)), n = numSim(celda(6)), ok = numSim(celda(7)), ko = numSim(celda(8)), bl = numSim(celda(9));
+        if (!id || isNaN(ts) || isNaN(n) || n <= 0 || isNaN(ok) || isNaN(ko)) return null; // també descarta la fila de capçalera
+        let perTema = null;
+        try { const t = JSON.parse(String(celda(11))); if (t && typeof t === 'object') perTema = t; } catch (e) { /* sense detall per tema */ }
+        return {
+            id: id, ts: ts,
+            tipus: String(celda(3)).trim().toLowerCase() || 'oficial',
+            dificultat: String(celda(4)).trim().toLowerCase() || 'tots',
+            cegues: SI.test(String(celda(5)).trim()),
+            n: n, ok: ok, ko: ko, bl: isNaN(bl) ? Math.max(0, n - ok - ko) : bl,
+            perTema: perTema, origen: 'sheet'
+        };
+    }).filter(Boolean);
+}
+
+async function pedirJSONSheet(hoja) {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(hoja)}&t=` + Date.now();
+    const text = await fetchTextoConTimeout(url);
+    const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    if (json.status === 'error' || !json.table || !Array.isArray(json.table.rows)) {
+        throw new Error("Resposta no vàlida per a " + hoja);
+    }
+    return json;
+}
+
+// Historial = el que ja és al Sheet + el que només és al mòbil (pendent). Un mateix ID mai surt dues vegades.
+function todosSimulacros() {
+    const mapa = new Map();
+    simulacrosNube.forEach(r => mapa.set(r.id, Object.assign({}, r, { pendiente: false })));
+    simulacrosLocal.forEach(r => { if (!mapa.has(r.id)) mapa.set(r.id, Object.assign({}, r, { pendiente: true })); });
+    return [...mapa.values()].sort((a, b) => a.ts - b.ts);
+}
+
+function nuevoIdSimulacro() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function guardarFilaLocalSim(fila) {
+    simulacrosLocal = leerJSONSim(CLAVE_SIM_LOCAL, []);          // llegir abans d'escriure: mai trepitja el que ja hi havia
+    if (!simulacrosLocal.some(r => r.id === fila.id)) simulacrosLocal.push(fila);
+    guardarJSONSim(CLAVE_SIM_LOCAL, simulacrosLocal);
+}
+
+// Es crida des de final(): registra el simulacre oficial acabat (només si s'ha fet de principi a fi).
+function registrarSimulacroOficial() {
+    if (!simulacroActual || simulacroActual.tipus !== 'oficial' || modoExamen) return null;
+    const perTema = {};
+    preguntas.forEach((q, i) => {
+        const tema = String(q.id || '').split('-')[0];
+        if (!tema) return;
+        const r = respuestasDadas[i];
+        const k = (r && !r.blanca) ? (r.acierto ? 0 : 1) : 2;
+        (perTema[tema] = perTema[tema] || [0, 0, 0])[k]++;
+    });
+    const fila = {
+        id: 's' + nuevoIdSimulacro(), ts: Date.now(), tipus: 'oficial', dificultat: simulacroActual.dificultat || 'tots',
+        cegues: !!modoCiegas, n: preguntas.length, ok: aciertos, ko: fallos, bl: blancas, perTema: perTema, origen: 'app'
+    };
+    simulacroActual = null;                                       // un simulacre només es registra una vegada
+    guardarFilaLocalSim(fila);
+    return fila;
+}
+
+function inicioSemana(ts) { // dilluns a les 00:00 (hora local) de la setmana de ts
+    const d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.getTime();
+}
+function contarSemana(todos) {
+    const desde = inicioSemana(Date.now());
+    return todos.filter(r => r.tipus === 'oficial' && r.ts >= desde).length;
+}
+
+function mediaUltimas(serie, k) {
+    if (serie.length < k) return null;
+    const ult = serie.slice(-k).map(notaSimulacro);
+    return ult.reduce((a, b) => a + b, 0) / k;
+}
+
+function estadisticasPorTema(serie) {
+    const conTema = serie.filter(r => r.perTema);
+    const acum = {};
+    conTema.forEach(r => Object.entries(r.perTema).forEach(([id, v]) => {
+        if (!Array.isArray(v)) return;
+        const a = acum[id] = acum[id] || [0, 0, 0];
+        a[0] += +v[0] || 0; a[1] += +v[1] || 0; a[2] += +v[2] || 0;
+    }));
+    const lista = Object.entries(acum)
+        .map(([id, a]) => ({ id: id, total: a[0] + a[1] + a[2], pct: Math.round(a[0] / (a[0] + a[1] + a[2] || 1) * 100) }))
+        .filter(t => t.total > 0)
+        .sort((x, y) => x.pct - y.pct || y.total - x.total);
+    return { sims: conTema.length, lista: lista };
+}
+
+// --- Lectura del Sheet (amb còpia local) i enviament de pendents ---
+async function refrescarEstadisticas() {
+    if (!navigator.onLine) return false;
+    let ok = false;
+    try {
+        configSim = normalizarConfigSim((await pedirJSONSheet(HOJA_CONFIG)).table.rows);
+        guardarJSONSim(CLAVE_CONFIG_SIM, configSim);
+    } catch (e) { console.warn("No s'ha pogut llegir la pestanya Config", e); }
+    try {
+        simulacrosNube = normalizarSimulacros(await pedirJSONSheet(HOJA_SIMULACROS));
+        guardarJSONSim(CLAVE_SIM_NUBE, simulacrosNube);
+        // el que ja és al Sheet surt de la cua local
+        const ids = new Set(simulacrosNube.map(r => r.id));
+        simulacrosLocal = leerJSONSim(CLAVE_SIM_LOCAL, []).filter(r => !ids.has(r.id));
+        guardarJSONSim(CLAVE_SIM_LOCAL, simulacrosLocal);
+        ok = true;
+    } catch (e) { console.warn("No s'ha pogut llegir la pestanya Simulacres", e); }
+    pintarEstadisticas();
+    return ok;
+}
+
+// Només s'envia si «Config» té sync_simulacres = SI (és a dir, l'Apps Script ja sap rebre'ls). Amb NO no surt res del mòbil.
+// El POST no-cors no confirma res: es dona per bo quan el simulacre apareix al Sheet (refrescarEstadisticas el treu de la cua).
+async function enviarPendientesSimulacros() {
+    if (!configSim.sync || !navigator.onLine) return;
+    const ahora = Date.now();
+    if (ahora - ultimoIntentoEnvioSim < 30000) return;
+    const pendientes = leerJSONSim(CLAVE_SIM_LOCAL, []);
+    if (!pendientes.length) return;
+    ultimoIntentoEnvioSim = ahora;
+    for (const fila of pendientes) {
+        try {
+            await fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ action: "guardar_simulacre", data: JSON.stringify(fila) })
+            });
+        } catch (e) { console.error("Error enviant el simulacre", e); return; }
+    }
+    await esperar(ESPERA_ESCRITURA_SIM_MS);
+    await refrescarEstadisticas();
+}
+
+function iniciarEstadisticas() {
+    configSim = sanearConfigSim(leerJSONSim(CLAVE_CONFIG_SIM, {}));
+    simulacrosNube = leerJSONSim(CLAVE_SIM_NUBE, []);
+    simulacrosLocal = leerJSONSim(CLAVE_SIM_LOCAL, []);
+    try { filtroSim = localStorage.getItem(CLAVE_FILTRO_SIM) === 'tots' ? 'tots' : 'comparables'; } catch (e) { /* res */ }
+    pintarEstadisticas();
+    refrescarEstadisticas().then(() => enviarPendientesSimulacros());
+}
+
+// --- Navegació ---
+function abrirStats() {
+    document.getElementById("pantalla-inicio").classList.add("oculto");
+    document.getElementById("pantalla-stats").classList.remove("oculto");
+    const q = document.getElementById("man-quan");
+    if (q && !q.value) q.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    pintarEstadisticas();
+    window.scrollTo(0, 0);
+    refrescarEstadisticas().then(() => enviarPendientesSimulacros());
+}
+function cerrarStats() {
+    document.getElementById("pantalla-stats").classList.add("oculto");
+    document.getElementById("pantalla-inicio").classList.remove("oculto");
+    window.scrollTo(0, 0);
+}
+function cambiarFiltroSim(f) {
+    filtroSim = f === 'tots' ? 'tots' : 'comparables';
+    try { localStorage.setItem(CLAVE_FILTRO_SIM, filtroSim); } catch (e) { /* res */ }
+    pintarEstadisticas();
+}
+
+// --- Afegir a mà (p. ex. un simulacre fet abans de tenir això, o fora de l'app) ---
+function anadirSimulacroManual() {
+    const val = id => document.getElementById(id).value;
+    const msg = document.getElementById("man-msg");
+    const error = t => { msg.textContent = t; msg.className = 'st-peu st-err'; };
+    const quan = val('man-quan');
+    const ts = quan ? new Date(quan).getTime() : NaN; // datetime-local = hora local del dispositiu
+    const ok = parseInt(val('man-ok'), 10), ko = parseInt(val('man-ko'), 10), bl = parseInt(val('man-bl'), 10);
+    if (isNaN(ts)) return error("Posa la data i l'hora.");
+    if (ts > Date.now() + 10 * 60000) return error("Aquesta data i hora són del futur.");
+    if ([ok, ko, bl].some(x => isNaN(x) || x < 0)) return error("Posa les correctes, els errors i els en blanc (0 o més).");
+    const n = ok + ko + bl;
+    if (n !== N_SIMULACRO_OFICIAL) return error(`Han de sumar ${N_SIMULACRO_OFICIAL} preguntes (ara en sumen ${n}).`);
+    const repetit = todosSimulacros().some(r => r.ts === ts && r.ok === ok && r.ko === ko && r.bl === bl);
+    if (repetit) return error("Aquest simulacre ja hi és.");
+    guardarFilaLocalSim({ id: 'm' + nuevoIdSimulacro(), ts: ts, tipus: 'oficial', dificultat: 'tots', cegues: true, n: n, ok: ok, ko: ko, bl: bl, perTema: null, origen: 'manual' });
+    ['man-ok', 'man-ko', 'man-bl'].forEach(id => { document.getElementById(id).value = ''; });
+    msg.textContent = `Afegit: ${fmtNota(notaSimulacro({ n: n, ok: ok, ko: ko }))}.`;
+    msg.className = 'st-peu st-okmsg';
+    pintarEstadisticas();
+    enviarPendientesSimulacros();
+}
+
+// --- Pintar ---
+function fechaCorta(ts) {
+    const d = new Date(ts), z = n => String(n).padStart(2, '0');
+    return `${z(d.getDate())}/${z(d.getMonth() + 1)}`;
+}
+function horaCorta(ts) {
+    const d = new Date(ts), z = n => String(n).padStart(2, '0');
+    return `${z(d.getHours())}:${z(d.getMinutes())}`;
+}
+
+function svgGraficoSim(serie) {
+    const notas = serie.map(notaSimulacro), n = serie.length, tall = configSim.tall;
+    let lo = Math.max(0, Math.floor(Math.min(...notas, tall) - 0.5));
+    let hi = Math.min(10, Math.ceil(Math.max(...notas, tall) + 0.5));
+    if (hi - lo < 2) { lo = Math.max(0, hi - 2); if (hi - lo < 2) hi = lo + 2; }
+    const W = 342, H = 210, pl = 30, pr = 12, pt = 14, pb = 28;
+    const y = v => pt + (hi - v) / (hi - lo) * (H - pt - pb);
+    const x = i => n === 1 ? pl + (W - pl - pr) / 2 : pl + i * (W - pl - pr) / (n - 1);
+    let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Nota de cada simulacre, de ${fmtNota(Math.min(...notas))} a ${fmtNota(Math.max(...notas))}, amb el tall a ${fmtNota(tall)}" style="display:block">`;
+    for (let v = lo; v <= hi; v++) {
+        s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--text);opacity:.12"/>` +
+             `<text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" style="fill:var(--muted);font:500 10px Inter,sans-serif">${v}</text>`;
+    }
+    s += `<line x1="${pl}" x2="${W - pr}" y1="${y(tall)}" y2="${y(tall)}" stroke-dasharray="5 4" style="stroke:var(--cta);stroke-width:1.6"/>` +
+         `<text x="${pl + 4}" y="${y(tall) - 6}" style="fill:var(--cta);font:700 10px Inter,sans-serif">tall ${fmtNota(tall)}</text>`;
+    if (n > 1) s += `<polyline fill="none" style="stroke:var(--text);opacity:.45;stroke-width:1.5" points="${notas.map((v, i) => x(i) + ',' + y(v)).join(' ')}"/>`;
+    if (n >= 3) {
+        const med = notas.map((_, i) => { const a = notas.slice(Math.max(0, i - 2), i + 1); return a.reduce((t, q) => t + q, 0) / a.length; });
+        s += `<polyline fill="none" stroke-dasharray="2 3" style="stroke:var(--info);stroke-width:2.2" points="${med.map((v, i) => x(i) + ',' + y(v)).join(' ')}"/>`;
+    }
+    notas.forEach((v, i) => { s += `<circle cx="${x(i)}" cy="${y(v)}" r="5" style="fill:${pasaTall(v) ? 'var(--ok-badge)' : 'var(--ko-badge)'};stroke:var(--bg);stroke-width:2"/>`; });
+    const marcas = n <= 3 ? serie.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
+    marcas.forEach(i => {
+        const ancla = n > 1 && i === 0 ? 'start' : (n > 1 && i === n - 1 ? 'end' : 'middle');
+        s += `<text x="${x(i)}" y="${H - 8}" text-anchor="${ancla}" style="fill:var(--muted);font:500 10px Inter,sans-serif">${fechaCorta(serie[i].ts)}</text>`;
+    });
+    return s + '</svg>';
+}
+
+function htmlStats() {
+    const todos = todosSimulacros();
+    const oficials = todos.filter(r => r.tipus === 'oficial');
+    const comparables = oficials.filter(esComparable);
+    const serie = filtroSim === 'tots' ? oficials : comparables;
+    const n = serie.length, tall = configSim.tall, obj = configSim.objectiu;
+    const semana = contarSemana(todos);
+
+    const filtros = `<div class="st-filtres" role="group" aria-label="Quins simulacres es compten">` +
+        `<button type="button" class="filtre-rev" aria-pressed="${filtroSim === 'comparables'}" onclick="cambiarFiltroSim('comparables')">Mixt · a cegues <b>${comparables.length}</b></button>` +
+        `<button type="button" class="filtre-rev" aria-pressed="${filtroSim === 'tots'}" onclick="cambiarFiltroSim('tots')">Tots els oficials <b>${oficials.length}</b></button></div>`;
+
+    const dots = `<div class="st-dots">${Array.from({ length: obj }, (_, k) => `<i class="${k < semana ? 'on' : ''}"></i>`).join('')}` +
+        `<span>${semana}/${obj}${semana >= obj ? ' · objectiu complert' : ''}</span></div>`;
+    const tarjetaSetmana = `<div class="st-card"><h3>aquesta setmana · objectiu mínim ${OBJECTIU_SETMANAL_MINIM}</h3>${dots}` +
+        `<p class="st-peu">de dilluns a diumenge · l'objectiu es canvia a la pestanya Config del Sheet</p></div>`;
+
+    if (!n) {
+        return filtros + `<div class="st-card"><h3>encara no hi ha dades</h3><p class="st-peu">` +
+            (oficials.length ? `Cap simulacre Mixt · a cegues encara. Mira «Tots els oficials» per veure els altres.` :
+                `Fes un Simulacre Oficial i quedarà registrat aquí amb la data i l'hora. També pots afegir-ne un a mà, més avall.`) +
+            `</p></div>` + tarjetaSetmana;
+    }
+
+    const notas = serie.map(notaSimulacro);
+    const ultima = notas[n - 1], mejor = Math.max(...notas), m3 = mediaUltimas(serie, 3);
+    const clase = d => d >= 0 ? 'st-up' : 'st-dn';
+    const hero = m3 === null
+        ? `<div class="st-kpi hero"><small>mitjana de les últimes 3</small><b>—</b><em>cal tenir 3 simulacres (en tens ${n}) · tall ${fmtNota(tall)}</em></div>`
+        : `<div class="st-kpi hero"><small>mitjana de les últimes 3</small><b>${fmtNota(m3)}</b><em class="${clase(r2(m3) - r2(tall))}">${fmtDelta(m3 - tall)} ${m3 >= tall ? 'per sobre' : 'per sota'} del tall ${fmtNota(tall)}</em></div>`;
+
+    const filas = [...serie].reverse().slice(0, MAX_FILES_HISTORIAL).map((r, i) => {
+        const nota = notaSimulacro(r);
+        const etiq = esComparable(r) ? '' : ` · ${r.dificultat !== 'tots' ? r.dificultat : ''}${r.dificultat !== 'tots' && !r.cegues ? ' · ' : ''}${!r.cegues ? 'amb correcció' : ''}`;
+        return `<div class="st-fila${i === 0 ? ' primera' : ''}"><span class="d">${fechaCorta(r.ts)} · ${horaCorta(r.ts)}${etiq}${r.pendiente ? ' ·&nbsp;📱' : ''}</span>` +
+            `<b>${fmtNota(nota)}</b><span class="m ${pasaTall(nota) ? 'si' : 'no'}">${pasaTall(nota) ? '≥ tall' : '< tall'}</span>` +
+            `<span class="n">✓${r.ok} ✗${r.ko} ○${r.bl}</span></div>`;
+    }).join('');
+    const mas = n > MAX_FILES_HISTORIAL ? `<p class="st-peu">i ${n - MAX_FILES_HISTORIAL} més, a la pestanya Simulacres del Sheet</p>` : '';
+    const pend = serie.filter(r => r.pendiente).length;
+    const peuPend = pend ? `<p class="st-peu">📱 ${pend === 1 ? '1 simulacre només és' : pend + ' simulacres només són'} al mòbil (encara no al Sheet). ${configSim.sync ? 'S’enviaran en breu.' : 'S’enviaran quan s’activi la sincronització.'}</p>` : '';
+
+    const tema = estadisticasPorTema(comparables);
+    let htmlTema;
+    if (tema.sims < MIN_SIMULACROS_TEMA) {
+        htmlTema = `<div class="st-lock"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>` +
+            `<span>Es desbloqueja amb ${MIN_SIMULACROS_TEMA} simulacres amb detall per tema (en tens ${tema.sims}). Cada simulacre només té 2-4 preguntes per tema: amb menys, no és fiable.</span></div>`;
+    } else {
+        htmlTema = `<div class="st-feble">${tema.lista.slice(0, 5).map(t =>
+            `<span class="t">${escapeHTML(getNombreTema(t.id))}</span><span class="p">${t.pct}%</span><span class="b"><i style="width:${t.pct}%"></i></span>`).join('')}</div>` +
+            `<p class="st-peu">encerts acumulats a cada tema · ${tema.sims} simulacres</p>`;
+    }
+
+    return filtros + `<div class="st-grid">${hero}` +
+        `<div class="st-kpi"><small>última</small><b>${fmtNota(ultima)}</b><em class="${clase(r2(ultima) - r2(tall))}">${fmtDelta(ultima - tall)} vs tall</em></div>` +
+        `<div class="st-kpi"><small>millor</small><b>${fmtNota(mejor)}</b><em>${n} ${n === 1 ? 'simulacre' : 'simulacres'}</em></div></div>` +
+        tarjetaSetmana +
+        `<div class="st-card"><h3>nota per simulacre</h3>${svgGraficoSim(serie)}` +
+        `<p class="st-peu">${n >= 3 ? 'línia de punts blava = mitjana mòbil de 3 · ' : ''}punt verd = per sobre del tall</p></div>` +
+        `<div class="st-card"><h3>historial</h3>${filas}${mas}${peuPend}</div>` +
+        `<div class="st-card"><h3>on perds punts (per tema)</h3>${htmlTema}</div>`;
+}
+
+function pintarEstadisticas() {
+    const resum = document.getElementById("stats-resum");
+    if (resum) {
+        const todos = todosSimulacros();
+        const comp = todos.filter(r => r.tipus === 'oficial' && esComparable(r));
+        const semana = `setmana ${contarSemana(todos)}/${configSim.objectiu}`;
+        resum.textContent = comp.length
+            ? `última ${fmtNota(notaSimulacro(comp[comp.length - 1]))} · ${semana} · tall ${fmtNota(configSim.tall)}`
+            : `encara cap simulacre · ${semana} · tall ${fmtNota(configSim.tall)}`;
+    }
+    const cont = document.getElementById("stats-contingut");
+    if (cont) cont.innerHTML = htmlStats();
+}
+
+// Bloc del resultat d'un simulacre oficial: nota vs tall, comparació amb l'anterior, mitjana de 3 i objectiu setmanal.
+function htmlBloqueResultadoSim(fila) {
+    if (!fila) return '';
+    if (!esComparable(fila)) {
+        return `<p class="st-aviso">${ico('aviso')}<span>Registrat, però no compta a les estadístiques principals (només Mixt · a cegues). El trobaràs a «Tots els oficials».</span></p>`;
+    }
+    const todos = todosSimulacros();
+    const comp = todos.filter(r => r.tipus === 'oficial' && esComparable(r));
+    const idx = comp.findIndex(r => r.id === fila.id);
+    const nota = notaSimulacro(fila), tall = configSim.tall;
+    const prev = idx > 0 ? comp[idx - 1] : null;
+    const m3 = idx >= 2 ? comp.slice(idx - 2, idx + 1).map(notaSimulacro).reduce((a, b) => a + b, 0) / 3 : null;
+    const record = idx > 0 && r2(nota) > Math.max(...comp.slice(0, idx).map(r => r2(notaSimulacro(r))));
+    const dif = r2(nota) - r2(tall), pasa = dif >= 0;
+    const pct = v => Math.max(0, Math.min(100, (v - 5) / 5 * 100));
+    const semana = contarSemana(todos), obj = configSim.objectiu;
+    const caja = (peu, valor, sub, cls) => `<div><small>${peu}</small><b${cls ? ` class="${cls}"` : ''}>${valor}</b><em>${sub}</em></div>`;
+    const dPrev = prev ? nota - notaSimulacro(prev) : null;
+    return `<div class="st-tall${pasa ? '' : ' no'}"><div class="cap"><span>nota de tall ${fmtNota(tall)}</span>` +
+        `<b class="${pasa ? 'st-up' : 'st-dn'}">${fmtDelta(dif)} · ${pasa ? 'per sobre' : 'per sota'}</b></div>` +
+        `<div class="st-bar" role="img" aria-label="Nota ${fmtNota(nota)} sobre una escala de 5 a 10; el tall és ${fmtNota(tall)}"><i class="marca" style="left:${pct(tall)}%"></i><i class="punt" style="left:${pct(nota)}%"></i></div>` +
+        `<div class="st-escala"><span>5</span><span>10</span></div></div>` +
+        (record ? `<div class="chips centrado st-record"><span class="chip c-ok">${ico('check')}nova millor nota</span></div>` : '') +
+        `<div class="st-comp">` +
+        (prev ? caja('vs anterior', fmtDelta(dPrev), fmtNota(notaSimulacro(prev)), r2(dPrev) > 0 ? 'st-up' : r2(dPrev) < 0 ? 'st-dn' : '') : caja('vs anterior', '—', 'primer registrat')) +
+        (m3 !== null ? caja('mitjana 3', fmtNota(m3), `${fmtDelta(m3 - tall)} vs tall`, r2(m3) >= r2(tall) ? 'st-up' : 'st-dn') : caja('mitjana 3', '—', `${Math.min(idx + 1, 3)} de 3`)) +
+        caja('setmana', `${semana}/${obj}`, semana >= obj ? 'objectiu complert' : `objectiu mínim ${obj}`) +
+        `</div>`;
 }
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (SRS) ---
@@ -1390,6 +1811,7 @@ async function prepararRepasoInteligente() {
         esSimulacroLargo = false;
         modoCiegas = false;
         modoExamen = null;
+        simulacroActual = null;
         iniciarTest();
 
     } catch (e) {
