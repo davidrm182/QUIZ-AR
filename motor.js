@@ -39,6 +39,8 @@ const ICONOS = {
     aviso:    '<path d="M12 4 3 19.5h18z"/><path d="M12 10v4.5M12 17.5v.01"/>',
     atras:    '<path d="M19 12H5m6-6-6 6 6 6"/>',
     adelante: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+    diana:    '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+    floc:     '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>',
     estrella: '<path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9z"/>',
     lupa:     '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
     ojo:      '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
@@ -69,6 +71,8 @@ function iniciarOpciones() {
     if (cegues) cegues.checked = leerOpcion('cegues');
     const sel = document.getElementById('selector-tipus');
     if (sel) sel.value = leerTipusTriat();
+    const selP = document.getElementById('selector-prob');
+    if (selP) selP.value = leerProbTriada();
 }
 
 // --- FILTRE PER TIPUS DE PREGUNTA (columna J «TipusPregunta» del Sheet) ---
@@ -87,6 +91,46 @@ function filtrarPorTipus(lista) {
     const set = new Set(triat.split(',').map(t => t.trim().toLowerCase()).filter(Boolean));
     return lista.filter(q => set.has(String(q.tipusPregunta || '').toLowerCase()));
 }
+// --- FILTRE PER PROBABILITAT (columna K «Probabilitat» del Sheet) ---
+// '' = totes · 'calentes' = només les que s'assemblen a preguntes d'examen oficial · 'sensefredes' = treu les improbables
+const CLAVE_PROB = CLAVE_OPCION + 'prob';
+function leerProbTriada() {
+    try { return localStorage.getItem(CLAVE_PROB) || ''; } catch (e) { return ''; }
+}
+function guardarProbTriada(valor) {
+    try { localStorage.setItem(CLAVE_PROB, valor || ''); } catch (e) {}
+}
+function nivelProb(q) { return String((q && q.probabilitat) || '').toLowerCase(); }
+function filtrarPorProb(lista) {
+    const triada = leerProbTriada();
+    if (triada === 'calentes') return lista.filter(q => nivelProb(q) === 'calenta');
+    if (triada === 'sensefredes') return lista.filter(q => nivelProb(q) !== 'freda');
+    return lista;
+}
+// Tipus + probabilitat junts (és el que fan servir el repàs i el test ràpid)
+function filtrarEstudio(lista) { return filtrarPorProb(filtrarPorTipus(lista)); }
+function hayFiltroEstudio() { return !!leerTipusTriat() || !!leerProbTriada(); }
+function nomFiltreEstudi() {
+    const parts = [];
+    if (leerTipusTriat()) parts.push(nomTipusTriat());
+    const sel = document.getElementById('selector-prob');
+    if (leerProbTriada() && sel && sel.selectedIndex >= 0) parts.push(sel.options[sel.selectedIndex].text);
+    return parts.join(' + ');
+}
+// Marca de probabilitat a la targeta: 🎯 calenta (amb on ha sortit) · ❄ freda (improbable). Probable no porta res.
+function marcaProbHTML(q) {
+    const n = nivelProb(q);
+    if (n === 'calenta') {
+        const on = q.haSortit ? `ha sortit ${q.haSortit.replace(/,\s*/g, ' · ')}` : 'calenta';
+        return `<div class="bocata c-calenta" aria-label="Pregunta calenta">` +
+               `<span class="it">${ico('diana')}${on}</span></div>`;
+    }
+    if (n === 'freda') {
+        return `<div class="bocata c-freda" aria-label="Pregunta freda"><span class="it">${ico('floc')}improbable</span></div>`;
+    }
+    return '';
+}
+
 function nomTipusTriat() {
     const sel = document.getElementById('selector-tipus');
     return sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : leerTipusTriat();
@@ -511,7 +555,9 @@ async function cargarPreguntas(temaId, estricto = false){
                         d: r.c[4] ? String(r.c[4].v || "") : "",
                         correcta: r.c[5] ? String(r.c[5].v || "").toLowerCase().trim() : "",
                         extra: r.c[6] ? String(r.c[6].v || "") : "",
-                        tipusPregunta: r.c[9] ? String(r.c[9].v || "").trim() : "" // columna J «TipusPregunta»
+                        tipusPregunta: r.c[9] ? String(r.c[9].v || "").trim() : "", // columna J «TipusPregunta»
+                        probabilitat: r.c[10] ? String(r.c[10].v || "").trim() : "", // columna K «Probabilitat» (Calenta/Probable/Freda)
+                        haSortit: r.c[11] ? String(r.c[11].v || "").trim() : ""      // columna L «HaSortit» (01/23, 01/24…)
                     };
                 })
                 .filter(q => q && q.pregunta.length > 2);
@@ -701,9 +747,9 @@ async function prepararQuiz(){
     
     if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
 
-    preguntas = filtrarPorTipus(preguntas);
+    preguntas = filtrarEstudio(preguntas);
     if(preguntas.length === 0){
-        alert(`Als temes triats no hi ha cap pregunta de «${nomTipusTriat()}».`);
+        alert(`Als temes triats no hi ha cap pregunta de «${nomFiltreEstudi()}».`);
         btn.innerText = "comencem test ràpid"; btn.disabled = false;
         return;
     }
@@ -1057,6 +1103,13 @@ function mostrarPregunta(){
         }
     }
 
+    // Probabilitat (no és SRS: no s'amaga amb l'ull). A cegues i als exàmens oficials no es mostra.
+    const marcaProb = (modoCiegas || modoExamen) ? '' : marcaProbHTML(q);
+    const claseProb = marcaProb ? (nivelProb(q) === 'calenta' ? 'q-calenta' : 'q-freda') : '';
+    const cajaPregunta = document.getElementById("pregunta");
+    cajaPregunta.classList.remove('q-calenta', 'q-freda');
+    if (claseProb) cajaPregunta.classList.add(claseProb);
+
     const botoOjo = (modoCiegas || modoExamen) ? `<span></span>` : `<button id="btn-ojo" class="ojo" onclick="alternarInfoSRS()" aria-pressed="true"></button>`;
     const progreso = Math.round(((indice + 1) / preguntas.length) * 100);
 
@@ -1065,6 +1118,7 @@ function mostrarPregunta(){
         <div class="q-prog"><span class="q-num">${indice + 1}<span> / ${preguntas.length}</span></span>${notaHTML}</div>
         <div class="barra"><div style="width:${progreso}%"></div></div>
         <div class="marcadors">${contadoresHTML}${infoSRSHTML}</div>
+        ${marcaProb ? `<div class="marca-prob">${marcaProb}</div>` : ''}
         <p class="q-texto">${q.pregunta}</p>`;
 
     // El botó rep l'ÍNDEX de l'opció (abans rebia el text escapat dins de l'HTML i es trencava amb certs caràcters)
@@ -1882,8 +1936,8 @@ async function prepararRepasoInteligente() {
         purgarHuerfanas(todasLasPreguntas, temasVerificados);
 
         // El filtre de tipus s'aplica DESPRÉS de purgar: la purga ha de veure totes les preguntes
-        const candidatas = filtrarPorTipus(todasLasPreguntas);
-        const hayFiltroTipus = !!leerTipusTriat();
+        const candidatas = filtrarEstudio(todasLasPreguntas);
+        const hayFiltroTipus = hayFiltroEstudio();
 
         const ara = Date.now();
         let pendientes = [];
@@ -1911,7 +1965,7 @@ async function prepararRepasoInteligente() {
 
         if (preguntas.length === 0) {
             alert(hayFiltroTipus
-                ? `No tens res pendent de «${nomTipusTriat()}» per avui. Prova amb «Tots els tipus».`
+                ? `No tens res pendent de «${nomFiltreEstudi()}» per avui. Prova traient el filtre.`
                 : "No tens res pendent per avui! Descansa una mica.");
             restaurarBoto();
             return;

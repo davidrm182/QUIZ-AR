@@ -68,6 +68,10 @@
             --warn-line: #5A4513;
             --warn-ink: #F2C879;
             --error-ink: #F29A92;
+            --hot-ink: #FF9C85;
+            --hot-bg: #3A2020;
+            --hot-line: #FF6F59;
+            --hot-glow: rgba(255, 111, 89, .35);
         }
 
         :root[data-theme="light"] {
@@ -115,6 +119,10 @@
             --warn-line: #F0D79B;
             --warn-ink: #6B4600;
             --error-ink: #B03225;
+            --hot-ink: #B8371F;
+            --hot-bg: #FFE9E3;
+            --hot-line: #E8573D;
+            --hot-glow: rgba(232, 87, 61, .30);
         }
 
         /* =====================================================================
@@ -414,6 +422,15 @@
         .bocata .ico { width: 15px; height: 15px; }
         .bocata.c-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
         .bocata.srs-oculta { visibility: hidden; opacity: 0; }
+
+        /* Probabilitat d'examen: 🎯 calenta (diana, color coral, NO el daurat de la ratxa) · ❄ freda (apagada) */
+        .marca-prob { display: flex; margin-top: -6px; }
+        .bocata.c-calenta { color: var(--hot-ink); background: var(--hot-bg); border-color: var(--hot-line); }
+        .bocata.c-freda { color: var(--muted); background: transparent; border-color: var(--line-soft); border-style: dashed; }
+        #pregunta.q-calenta .q-texto { border-left: 4px solid var(--hot-line); padding-left: 10px; }
+        #pregunta.q-freda .q-texto { opacity: .62; }
+        #pregunta.q-freda ~ #opciones { opacity: .78; transition: opacity .2s; }
+        #pregunta.q-freda ~ #opciones.revelado, #pregunta.q-freda ~ #opciones:focus-within { opacity: 1; }
 
         .q-texto { font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--text); }
 
@@ -852,6 +869,17 @@
                     <option value="Norma">📜 Contingut de la norma</option>
                     <option value="Especies">🦌 Espècies</option>
                     <option value="Geografia">🗺️ Geografia</option>
+                </select>
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+
+            <!-- FILTRE PER PROBABILITAT (columna K del Sheet): també només per al repàs i el test ràpid -->
+            <div class="sec-label">probabilitat d'examen · repàs i test ràpid</div>
+            <div class="campo">
+                <select id="selector-prob" aria-label="Probabilitat d'examen per al repàs i el test ràpid" onchange="guardarProbTriada(this.value)">
+                    <option value="">Totes les preguntes</option>
+                    <option value="calentes">🎯 Només calentes (ja han sortit)</option>
+                    <option value="sensefredes">🎯✅ Sense les improbables</option>
                 </select>
                 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
             </div>
