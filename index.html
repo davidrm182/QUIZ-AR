@@ -837,6 +837,25 @@
                 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
             </button>
 
+            <!-- FILTRE PER TIPUS DE PREGUNTA: afecta el Repàs Intel·ligent i el test ràpid (no els simulacres) -->
+            <div class="sec-label">tipus de pregunta · repàs i test ràpid</div>
+            <div class="campo">
+                <select id="selector-tipus" aria-label="Tipus de pregunta per al repàs i el test ràpid" onchange="guardarTipusTriat(this.value)">
+                    <option value="">Tots els tipus</option>
+                    <option value="Xifres">🔢 Només xifres</option>
+                    <option value="Xifres,Terminis">🔢📅 Xifres + terminis</option>
+                    <option value="Terminis">📅 Terminis i dates</option>
+                    <option value="Definicions">📖 Definicions</option>
+                    <option value="Llistes">📋 Llistes i classificacions</option>
+                    <option value="Infraccions">⚖️ Infraccions i penes</option>
+                    <option value="Organ">🏛️ Òrgan competent</option>
+                    <option value="Norma">📜 Contingut de la norma</option>
+                    <option value="Especies">🦌 Espècies</option>
+                    <option value="Geografia">🗺️ Geografia</option>
+                </select>
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+
             <!-- OPCIONS D'ESTUDI (es recorden en aquest dispositiu) -->
             <div class="opc-fila">
                 <label class="opc-chip" for="opt-info-srs" title="Info SRS abans de respondre: ratxa, fallades i interval de cada pregunta">
