@@ -68,10 +68,7 @@
             --warn-line: #5A4513;
             --warn-ink: #F2C879;
             --error-ink: #F29A92;
-            --hot-ink: #FF9C85;
-            --hot-bg: #3A2020;
-            --hot-line: #FF6F59;
-            --hot-glow: rgba(255, 111, 89, .35);
+            --hot-ink: #DDF3EC;
         }
 
         :root[data-theme="light"] {
@@ -119,10 +116,7 @@
             --warn-line: #F0D79B;
             --warn-ink: #6B4600;
             --error-ink: #B03225;
-            --hot-ink: #B8371F;
-            --hot-bg: #FFE9E3;
-            --hot-line: #E8573D;
-            --hot-glow: rgba(232, 87, 61, .30);
+            --hot-ink: #2E6B5C;
         }
 
         /* =====================================================================
@@ -423,14 +417,25 @@
         .bocata.c-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
         .bocata.srs-oculta { visibility: hidden; opacity: 0; }
 
-        /* Probabilitat d'examen: 🎯 calenta (diana, color coral, NO el daurat de la ratxa) · ❄ freda (apagada) */
-        .marca-prob { display: flex; margin-top: -6px; }
-        .bocata.c-calenta { color: var(--hot-ink); background: var(--hot-bg); border-color: var(--hot-line); }
-        .bocata.c-freda { color: var(--muted); background: transparent; border-color: var(--line-soft); border-style: dashed; }
-        #pregunta.q-calenta .q-texto { border-left: 4px solid var(--hot-line); padding-left: 10px; }
-        #pregunta.q-freda .q-texto { opacity: .62; }
-        #pregunta.q-freda ~ #opciones { opacity: .78; transition: opacity .2s; }
-        #pregunta.q-freda ~ #opciones.revelado, #pregunta.q-freda ~ #opciones:focus-within { opacity: 1; }
+        /* Pregunta calenta (ja ha sortit a un examen oficial): vora degradada menta → blau → lila i una lluentor
+           que hi passa UN cop quan apareix la pregunta. Cap color d'alerta ni el daurat de la ratxa. */
+        .bocata.c-calenta {
+            position: relative; overflow: hidden; color: var(--hot-ink);
+            border: 2px solid transparent;
+            background: linear-gradient(var(--surface), var(--surface)) padding-box,
+                        linear-gradient(110deg, #7DE3C3, #8EC1F0, #C79BFF) border-box;
+        }
+        .bocata.c-calenta::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.28) 50%, transparent 70%);
+            transform: translateX(-120%); animation: brillo-calenta 1.3s ease-out .35s 1;
+        }
+        @keyframes brillo-calenta { to { transform: translateX(120%); } }
+        @media (prefers-reduced-motion: reduce) { .bocata.c-calenta::after { animation: none; } }
+        /* Amb la càpsula calenta hi ha 3 càpsules a la fila: es compacten una mica perquè càpiguen al mòbil */
+        .marcadors:has(.c-calenta) { gap: 6px; }
+        .marcadors:has(.c-calenta) .bocata .it { padding: 0 6px; gap: 4px; }
+        .marcadors:has(.c-calenta) .bocata { padding: 0 2px; font-size: 12.5px; }
 
         .q-texto { font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--text); }
 
@@ -879,7 +884,7 @@
                 <select id="selector-prob" aria-label="Probabilitat d'examen per al repàs i el test ràpid" onchange="guardarProbTriada(this.value)">
                     <option value="">Totes les preguntes</option>
                     <option value="calentes">🎯 Només calentes (ja han sortit)</option>
-                    <option value="sensefredes">🎯✅ Sense les improbables</option>
+                    <option value="sensefredes">Sense les improbables (fredes)</option>
                 </select>
                 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
             </div>
