@@ -40,7 +40,6 @@ const ICONOS = {
     atras:    '<path d="M19 12H5m6-6-6 6 6 6"/>',
     adelante: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
     diana:    '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
-    floc:     '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>',
     estrella: '<path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9z"/>',
     lupa:     '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
     ojo:      '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
@@ -117,18 +116,15 @@ function nomFiltreEstudi() {
     if (leerProbTriada() && sel && sel.selectedIndex >= 0) parts.push(sel.options[sel.selectedIndex].text);
     return parts.join(' + ');
 }
-// Marca de probabilitat a la targeta: 🎯 calenta (amb on ha sortit) · ❄ freda (improbable). Probable no porta res.
+// Marca de probabilitat: només les calentes porten càpsula (diana + on ha sortit). Probables i fredes es veuen com sempre.
 function marcaProbHTML(q) {
-    const n = nivelProb(q);
-    if (n === 'calenta') {
-        const on = q.haSortit ? `ha sortit ${q.haSortit.replace(/,\s*/g, ' · ')}` : 'calenta';
-        return `<div class="bocata c-calenta" aria-label="Pregunta calenta">` +
-               `<span class="it">${ico('diana')}${on}</span></div>`;
-    }
-    if (n === 'freda') {
-        return `<div class="bocata c-freda" aria-label="Pregunta freda"><span class="it">${ico('floc')}improbable</span></div>`;
-    }
-    return '';
+    if (nivelProb(q) !== 'calenta') return '';
+    // Compacte perquè càpiga entre els encerts i la info SRS al mòbil: "01/23, 01/24" → "’23 ’24"
+    const anys = (q.haSortit || '').split(',').map(x => (x.trim().match(/\/(\d{2})$/) || [])[1]).filter(Boolean);
+    // 3 o més exàmens: "×3" (les dates surten en mantenir premut / al títol)
+    const on = anys.length >= 3 ? '×' + anys.length : anys.map(a => '’' + a).join(' ');
+    return `<div class="bocata c-calenta" title="Ha sortit a l'examen ${q.haSortit || 'oficial'}" aria-label="Pregunta calenta: ha sortit a l'examen ${q.haSortit || 'oficial'}">` +
+           `<span class="it">${ico('diana')}${on}</span></div>`;
 }
 
 function nomTipusTriat() {
@@ -1105,10 +1101,6 @@ function mostrarPregunta(){
 
     // Probabilitat (no és SRS: no s'amaga amb l'ull). A cegues i als exàmens oficials no es mostra.
     const marcaProb = (modoCiegas || modoExamen) ? '' : marcaProbHTML(q);
-    const claseProb = marcaProb ? (nivelProb(q) === 'calenta' ? 'q-calenta' : 'q-freda') : '';
-    const cajaPregunta = document.getElementById("pregunta");
-    cajaPregunta.classList.remove('q-calenta', 'q-freda');
-    if (claseProb) cajaPregunta.classList.add(claseProb);
 
     const botoOjo = (modoCiegas || modoExamen) ? `<span></span>` : `<button id="btn-ojo" class="ojo" onclick="alternarInfoSRS()" aria-pressed="true"></button>`;
     const progreso = Math.round(((indice + 1) / preguntas.length) * 100);
@@ -1117,8 +1109,7 @@ function mostrarPregunta(){
         <div class="q-top"><span></span><span class="q-tema">${q.tema}</span>${botoOjo}</div>
         <div class="q-prog"><span class="q-num">${indice + 1}<span> / ${preguntas.length}</span></span>${notaHTML}</div>
         <div class="barra"><div style="width:${progreso}%"></div></div>
-        <div class="marcadors">${contadoresHTML}${infoSRSHTML}</div>
-        ${marcaProb ? `<div class="marca-prob">${marcaProb}</div>` : ''}
+        <div class="marcadors">${contadoresHTML}${marcaProb}${infoSRSHTML}</div>
         <p class="q-texto">${q.pregunta}</p>`;
 
     // El botó rep l'ÍNDEX de l'opció (abans rebia el text escapat dins de l'HTML i es trencava amb certs caràcters)
