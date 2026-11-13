@@ -120,6 +120,17 @@ let versionSRS = 0;       // puja a cada canvi local del SRS
 let syncEnCurso = false;
 let timerSync = null;
 
+// Lectura segura del núvol: abans d'ENVIAR res, el local s'ha de poder fusionar amb el núvol (guanya el repàs més recent).
+// Si no, un dispositiu desactualitzat triaria preguntes amb ratxes velles i les tornaria a pujar.
+let nubeFusionada = false;        // true quan en aquesta sessió s'ha llegit el núvol i fusionat amb el local
+let ultimaLecturaNube = 0;        // ms de l'última lectura correcta
+let sesionIniciada = false;       // true un cop entrat amb el PIN
+let lecturaNubeEnCurso = null;    // promesa de la lectura en marxa (així mai n'hi ha dues alhora)
+let LECTURA_NUBE_RAPIDA_MS = 5000;   // en entrar: com fins ara, sense fer esperar més
+let LECTURA_NUBE_LENTA_MS = 15000;   // reintents en segon pla i abans d'enviar: més marge
+let REINTENTOS_LECTURA_MS = [3000, 30000, 90000]; // esperes entre reintents en segon pla (després, en tornar la connexió o l'app)
+let REFRESCO_AL_VOLVER_MS = 30 * 60 * 1000; // en tornar a l'app després de tant de temps, es llegeix el núvol de nou
+
 // 1. LISTADO DE TEMAS COMPLETO
 const TEMAS_GENERAL = [
     {id:"tg1",nombre:"1. Constitució i Estatut d'Autonomia"},
@@ -188,6 +199,10 @@ async function validarPin(){
         generarChecks();
         cargarEnlaces(); // llista d'eines (Psicotècnics / Estudi); en segon pla, no frena l'entrada
         iniciarEstadisticas(); // estadístiques dels simulacres oficials (còpia local primer, Sheet en segon pla)
+        sesionIniciada = true;
+        actualizarAvisoNube();
+        // Si en entrar no s'ha pogut llegir el núvol, es reintenta en segon pla (sense fer esperar l'entrada)
+        if (!nubeFusionada) reintentarLecturaEnSegundoPlano();
         // Si l'última sessió va quedar sense confirmar al núvol, es reintenta ara (en segon pla)
         if (haySyncPendiente()) sincronizarSRSCloud({ verificar: true });
     }else{
@@ -287,7 +302,8 @@ function pedirDatosNube(timeoutMs = 5000) {
     });
 }
 
-async function cargarFavoritosDesdeCloud() {
+// Retorna true si s'ha pogut llegir el núvol (i fusionar el SRS), false si no (sense connexió, error o temps esgotat).
+async function cargarFavoritosDesdeCloud(timeoutMs = LECTURA_NUBE_RAPIDA_MS) {
     const datosLocalesFavs = localStorage.getItem('misFavoritosOpos');
     if (datosLocalesFavs) {
         try {
@@ -299,11 +315,11 @@ async function cargarFavoritosDesdeCloud() {
 
     if (!navigator.onLine) {
         console.log("Modo avión detectado. Usando datos guardados localmente.");
-        return;
+        return false;
     }
 
-    const data = await pedirDatosNube(5000);
-    if (data === null) return; // sense núvol: es treballa amb el que hi ha en local
+    const data = await pedirDatosNube(timeoutMs);
+    if (data === null) return false; // sense núvol: es treballa amb el que hi ha en local (i es reintentarà)
 
     if (data && data.favoritos !== undefined) {
         favoritosCloud = data.favoritos;
@@ -328,7 +344,63 @@ async function cargarFavoritosDesdeCloud() {
 
     const contador = document.getElementById("count-favs");
     if (contador) contador.innerText = favoritosCloud.length;
+
+    nubeFusionada = true;
+    ultimaLecturaNube = Date.now();
+    actualizarAvisoNube();
+    return true;
 }
+
+// Una sola lectura alhora: si ja n'hi ha una en marxa, tothom espera aquesta.
+function asegurarLecturaNube(timeoutMs = LECTURA_NUBE_LENTA_MS) {
+    if (nubeFusionada) return Promise.resolve(true);
+    if (lecturaNubeEnCurso) return lecturaNubeEnCurso;
+    lecturaNubeEnCurso = (async () => {
+        try { return await cargarFavoritosDesdeCloud(timeoutMs); }
+        catch (e) { console.warn("Error llegint el núvol", e); return false; }
+        finally { lecturaNubeEnCurso = null; }
+    })();
+    return lecturaNubeEnCurso;
+}
+
+// En segon pla, amb més marge de temps; quan aconsegueix llegir-lo, puja el que hi hagi pendent.
+let reintentandoLectura = false;
+async function reintentarLecturaEnSegundoPlano() {
+    if (reintentandoLectura) return;
+    reintentandoLectura = true;
+    try {
+        for (const espera of REINTENTOS_LECTURA_MS) {
+            if (nubeFusionada) return;
+            await esperar(espera);
+            if (nubeFusionada) return;
+            if (await asegurarLecturaNube(LECTURA_NUBE_LENTA_MS)) { alPonerseAlDiaConLaNube(); return; }
+        }
+    } finally { reintentandoLectura = false; }
+}
+
+function alPonerseAlDiaConLaNube() {
+    actualizarAvisoNube();
+    if (haySyncPendiente()) sincronizarSRSCloud({ verificar: true });
+}
+
+// Avís a l'inici mentre el dispositiu no s'ha pogut posar al dia amb el núvol.
+function actualizarAvisoNube() {
+    const el = document.getElementById("aviso-nube");
+    if (!el) return;
+    if (!sesionIniciada || nubeFusionada) { el.classList.add("oculto"); return; }
+    el.classList.remove("oculto");
+    el.innerHTML = ico('aviso') + "<span>" + (navigator.onLine
+        ? "No s'ha pogut llegir el núvol: les ratxes poden estar desactualitzades. Es torna a provar sol."
+        : "Sense connexió: vas amb les ratxes guardades en aquest dispositiu. En tornar la connexió es posaran al dia soles.") + "</span>";
+}
+
+// En tornar la connexió, si encara no s'ha pogut llegir el núvol, es llegeix ara.
+window.addEventListener('online', () => {
+    if (!sesionIniciada) return;
+    actualizarAvisoNube();
+    if (!nubeFusionada) asegurarLecturaNube(LECTURA_NUBE_LENTA_MS).then(ok => { if (ok) alPonerseAlDiaConLaNube(); });
+});
+window.addEventListener('offline', () => actualizarAvisoNube());
 
 // 3. GENERACIÓN DE INTERFAZ
 function generarChecks(){
@@ -1852,6 +1924,14 @@ async function verificarSyncEnNube(instantanea) {
 async function sincronizarSRSCloud({ verificar = false } = {}) {
     if (!navigator.onLine) return false;
 
+    // MAI s'envia sense haver fusionat abans amb el núvol: si no s'ha pogut llegir, el que hi ha en local pot ser
+    // vell i trepitjaria repassos més recents fets des d'un altre dispositiu. Queda pendent i es reintenta.
+    if (!nubeFusionada) {
+        const leida = await asegurarLecturaNube(LECTURA_NUBE_LENTA_MS);
+        if (!leida) { marcarPendienteSync(); return false; }
+        actualizarAvisoNube();
+    }
+
     if (syncEnCurso) {
         if (!verificar) { programarSyncSRS(); return false; }
         for (let i = 0; i < 100 && syncEnCurso; i++) await esperar(300);
@@ -1893,6 +1973,15 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden && haySyncPendiente() && !syncEnCurso) {
         clearTimeout(timerSync); timerSync = null;
         sincronizarSRSCloud();
+    }
+    // En tornar a l'app després d'una estona (p. ex. una pestanya oberta des de fa dies), es posa al dia amb el núvol
+    if (!document.hidden && sesionIniciada && !lecturaNubeEnCurso && Date.now() - ultimaLecturaNube > REFRESCO_AL_VOLVER_MS) {
+        lecturaNubeEnCurso = (async () => {
+            try { return await cargarFavoritosDesdeCloud(LECTURA_NUBE_LENTA_MS); }
+            catch (e) { return false; }
+            finally { lecturaNubeEnCurso = null; }
+        })();
+        lecturaNubeEnCurso.then(ok => { if (ok) alPonerseAlDiaConLaNube(); });
     }
 });
 
