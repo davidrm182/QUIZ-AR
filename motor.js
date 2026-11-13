@@ -67,6 +67,29 @@ function iniciarOpciones() {
     const cegues = document.getElementById('opt-cegues');
     if (info) info.checked = leerOpcion('infoSRS');
     if (cegues) cegues.checked = leerOpcion('cegues');
+    const sel = document.getElementById('selector-tipus');
+    if (sel) sel.value = leerTipusTriat();
+}
+
+// --- FILTRE PER TIPUS DE PREGUNTA (columna J «TipusPregunta» del Sheet) ---
+// Només afecta el Repàs Intel·ligent i el test ràpid; els simulacres i els exàmens oficials no es filtren mai.
+// El valor pot ser un tipus ("Xifres") o diversos separats per comes ("Xifres,Terminis"). Buit = tots.
+const CLAVE_TIPUS = CLAVE_OPCION + 'tipus';
+function leerTipusTriat() {
+    try { return localStorage.getItem(CLAVE_TIPUS) || ''; } catch (e) { return ''; }
+}
+function guardarTipusTriat(valor) {
+    try { localStorage.setItem(CLAVE_TIPUS, valor || ''); } catch (e) {}
+}
+function filtrarPorTipus(lista) {
+    const triat = leerTipusTriat();
+    if (!triat) return lista;
+    const set = new Set(triat.split(',').map(t => t.trim().toLowerCase()).filter(Boolean));
+    return lista.filter(q => set.has(String(q.tipusPregunta || '').toLowerCase()));
+}
+function nomTipusTriat() {
+    const sel = document.getElementById('selector-tipus');
+    return sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : leerTipusTriat();
 }
 
 function alternarTema() {
@@ -487,7 +510,8 @@ async function cargarPreguntas(temaId, estricto = false){
                         c: r.c[3] ? String(r.c[3].v || "") : "",
                         d: r.c[4] ? String(r.c[4].v || "") : "",
                         correcta: r.c[5] ? String(r.c[5].v || "").toLowerCase().trim() : "",
-                        extra: r.c[6] ? String(r.c[6].v || "") : ""
+                        extra: r.c[6] ? String(r.c[6].v || "") : "",
+                        tipusPregunta: r.c[9] ? String(r.c[9].v || "").trim() : "" // columna J «TipusPregunta»
                     };
                 })
                 .filter(q => q && q.pregunta.length > 2);
@@ -676,6 +700,13 @@ async function prepararQuiz(){
     }
     
     if(preguntas.length === 0){ alert("Error al carregar"); location.reload(); return; }
+
+    preguntas = filtrarPorTipus(preguntas);
+    if(preguntas.length === 0){
+        alert(`Als temes triats no hi ha cap pregunta de «${nomTipusTriat()}».`);
+        btn.innerText = "comencem test ràpid"; btn.disabled = false;
+        return;
+    }
     
     mezclar(preguntas);
     const cantidad = parseInt(document.getElementById("num-preguntas").value);
@@ -1850,11 +1881,15 @@ async function prepararRepasoInteligente() {
 
         purgarHuerfanas(todasLasPreguntas, temasVerificados);
 
+        // El filtre de tipus s'aplica DESPRÉS de purgar: la purga ha de veure totes les preguntes
+        const candidatas = filtrarPorTipus(todasLasPreguntas);
+        const hayFiltroTipus = !!leerTipusTriat();
+
         const ara = Date.now();
         let pendientes = [];
         let nuevas = [];
 
-        todasLasPreguntas.forEach(q => {
+        candidatas.forEach(q => {
             const stats = cerebroSRS[q.id];
             if (!stats) {
                 nuevas.push(q);
@@ -1875,7 +1910,9 @@ async function prepararRepasoInteligente() {
         }
 
         if (preguntas.length === 0) {
-            alert("No tens res pendent per avui! Descansa una mica.");
+            alert(hayFiltroTipus
+                ? `No tens res pendent de «${nomTipusTriat()}» per avui. Prova amb «Tots els tipus».`
+                : "No tens res pendent per avui! Descansa una mica.");
             restaurarBoto();
             return;
         }
