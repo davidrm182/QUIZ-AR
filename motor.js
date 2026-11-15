@@ -1263,7 +1263,8 @@ async function final(){
         ? `<div class="chips centrado"><span class="chip ${enReservas ? 'c-neutro' : 'c-info'}">${ico(enReservas ? 'aviso' : 'check')}${modoExamen.nombre}${enReservas ? ' · reserves opcionals: no compten' : ''}</span></div>` : "";
     const valorGran = enReservas ? `${aciertos}/${preguntas.length}` : nota;
     // A cegues no has vist les correccions: al final es poden revisar totes les respostes (encerts, errors i en blanc)
-    const botonRevision = modoCiegas
+    // El Simulacre Oficial també es pot revisar amb correcció (i des de l'historial, més endavant)
+    const botonRevision = (modoCiegas || filaSim)
         ? `<button class="btn btn-outline" onclick="mostrarRevision()">${ico('lupa')}${textoBotonRevision()}</button>` : "";
     // Acabat l'examen: les reserves que no han entrat es poden fer a part
     const botonReservas = (modoExamen && !enReservas && modoExamen.reservas.length > 0)
@@ -1352,9 +1353,29 @@ function mostrarRevision() {
     }).join("");
 
     filtrarRevision('tot');
+    prepararPantallaRevision('final', '', '');
     document.getElementById("pantalla-final").classList.add("oculto");
     document.getElementById("pantalla-revision").classList.remove("oculto");
     window.scrollTo(0, 0);
+}
+
+// La pantalla de revisió serveix per al resultat acabat de fer i per als simulacres de l'historial: d'on vens i què s'hi afegeix
+let origenRevision = 'final';
+function prepararPantallaRevision(origen, htmlExtraCap, htmlAccions) {
+    origenRevision = origen;
+    const tornar = origen === 'stats' ? 'tornar a les estadístiques' : 'tornar al resultat';
+    const btn = document.getElementById("btn-tornar-revision");
+    if (btn) btn.textContent = tornar;
+    const cab = document.querySelector("#pantalla-revision .cab-rev .btn-tema");
+    if (cab) { cab.setAttribute('aria-label', tornar); cab.title = tornar; }
+    const titol = document.getElementById("titol-revision");
+    if (titol) titol.textContent = origen === 'stats' ? 'revisió del simulacre' : 'revisió de respostes';
+    const extra = document.getElementById("rev-cap-extra");
+    if (extra) extra.innerHTML = htmlExtraCap || '';
+    const acc = document.getElementById("rev-accions");
+    if (acc) acc.innerHTML = htmlAccions || '';
+    const filtres = document.getElementById("filtres-revision");
+    if (filtres) filtres.classList.remove("oculto");
 }
 
 // Filtre de la revisió: 'tot' (per defecte), 'errors' (errors + en blanc) o 'ok' (correctes). Només amaga/mostra fitxes.
@@ -1374,7 +1395,7 @@ function filtrarRevision(filtro) {
 
 function cerrarRevision() {
     document.getElementById("pantalla-revision").classList.add("oculto");
-    document.getElementById("pantalla-final").classList.remove("oculto");
+    document.getElementById(origenRevision === 'stats' ? "pantalla-stats" : "pantalla-final").classList.remove("oculto");
     window.scrollTo(0, 0);
 }
 
@@ -1400,7 +1421,7 @@ const N_SIMULACRO_OFICIAL = Object.values(PESOS_SIMULACRO).reduce((a, b) => a + 
 let simulacroActual = null;    // { tipus, dificultat } mentre es fa un simulacre; null en qualsevol altre test
 let simulacrosNube = [];       // llegits del Sheet
 let simulacrosLocal = [];      // pendents d'arribar al Sheet
-let configSim = { tall: TALL_PER_DEFECTE, objectiu: OBJECTIU_SETMANAL_MINIM, sync: false };
+let configSim = { tall: TALL_PER_DEFECTE, objectiu: OBJECTIU_SETMANAL_MINIM, sync: false, syncDetall: false };
 let filtroSim = 'comparables'; // 'comparables' (Mixt · a cegues) | 'tots'
 let ultimoIntentoEnvioSim = 0;
 let ESPERA_ESCRITURA_SIM_MS = 2500; // el Sheet triga un moment a escriure abans de poder verificar-ho
@@ -1426,12 +1447,13 @@ function sanearConfigSim(c) {
     return {
         tall: (!isNaN(tall) && tall > 0 && tall <= 10) ? tall : TALL_PER_DEFECTE,
         objectiu: isNaN(obj) ? OBJECTIU_SETMANAL_MINIM : Math.max(OBJECTIU_SETMANAL_MINIM, obj),
-        sync: c.sync === true
+        sync: c.sync === true,
+        syncDetall: c.syncDetall === true
     };
 }
 
 function normalizarConfigSim(filas) {
-    const cfg = { tall: TALL_PER_DEFECTE, objectiu: OBJECTIU_SETMANAL_MINIM, sync: false };
+    const cfg = { tall: TALL_PER_DEFECTE, objectiu: OBJECTIU_SETMANAL_MINIM, sync: false, syncDetall: false };
     (filas || []).forEach(r => {
         if (!r || !r.c || !r.c[0] || r.c[0].v == null) return;
         const clave = String(r.c[0].v).trim().toLowerCase();
@@ -1439,6 +1461,7 @@ function normalizarConfigSim(filas) {
         if (clave === 'nota_tall') cfg.tall = valor;
         else if (clave === 'objectiu_setmanal') cfg.objectiu = valor;
         else if (clave === 'sync_simulacres') cfg.sync = /^(si|sí|s|yes|y|true|1)$/i.test(String(valor).trim());
+        else if (clave === 'sync_detall') cfg.syncDetall = /^(si|sí|s|yes|y|true|1)$/i.test(String(valor).trim());
     });
     return sanearConfigSim(cfg);
 }
@@ -1512,6 +1535,7 @@ function registrarSimulacroOficial() {
     };
     simulacroActual = null;                                       // un simulacre només es registra una vegada
     guardarFilaLocalSim(fila);
+    guardarDetallLocal(construirDetall(fila));                    // pregunta per pregunta (per revisar-lo des de l'historial)
     return fila;
 }
 
@@ -1571,6 +1595,7 @@ async function refrescarEstadisticas() {
 // Només s'envia si «Config» té sync_simulacres = SI (és a dir, l'Apps Script ja sap rebre'ls). Amb NO no surt res del mòbil.
 // El POST no-cors no confirma res: es dona per bo quan el simulacre apareix al Sheet (refrescarEstadisticas el treu de la cua).
 async function enviarPendientesSimulacros() {
+    enviarPendientesDetall(); // el detall pregunta per pregunta va per una altra cua (i un altre interruptor de Config)
     if (!configSim.sync || !navigator.onLine) return;
     const ahora = Date.now();
     if (ahora - ultimoIntentoEnvioSim < 30000) return;
@@ -1716,9 +1741,14 @@ function htmlStats() {
     const filas = [...serie].reverse().slice(0, MAX_FILES_HISTORIAL).map((r, i) => {
         const nota = notaSimulacro(r);
         const etiq = esComparable(r) ? '' : ` · ${r.dificultat !== 'tots' ? r.dificultat : ''}${r.dificultat !== 'tots' && !r.cegues ? ' · ' : ''}${!r.cegues ? 'amb correcció' : ''}`;
-        return `<div class="st-fila${i === 0 ? ' primera' : ''}"><span class="d">${fechaCorta(r.ts)} · ${horaCorta(r.ts)}${etiq}${r.pendiente ? ' ·&nbsp;📱' : ''}</span>` +
+        const interior = `<span class="d">${fechaCorta(r.ts)} · ${horaCorta(r.ts)}${etiq}${r.pendiente ? ' ·&nbsp;📱' : ''}</span>` +
             `<b>${fmtNota(nota)}</b><span class="m ${pasaTall(nota) ? 'si' : 'no'}">${pasaTall(nota) ? '≥ tall' : '< tall'}</span>` +
-            `<span class="n">✓${r.ok} ✗${r.ko} ○${r.bl}</span></div>`;
+            `<span class="n">✓${r.ok} ✗${r.ko} ○${r.bl}</span>`;
+        const cls = `st-fila${i === 0 ? ' primera' : ''}`;
+        // Amb detall pregunta per pregunta: la fila s'obre i porta a la revisió (encerts, errors, en blanc i el seu extra)
+        return tieneDetall(r)
+            ? `<button type="button" class="${cls} amb-detall" onclick="abrirDetallSimulacro('${r.id}')" aria-label="Revisar el simulacre del ${fechaCorta(r.ts)} a les ${horaCorta(r.ts)}">${interior}<span class="lp">${ico('lupa')}</span></button>`
+            : `<div class="${cls}">${interior}<span class="lp"></span></div>`;
     }).join('');
     const mas = n > MAX_FILES_HISTORIAL ? `<p class="st-peu">i ${n - MAX_FILES_HISTORIAL} més, a la pestanya Simulacres del Sheet</p>` : '';
     const pend = serie.filter(r => r.pendiente).length;
@@ -1735,13 +1765,15 @@ function htmlStats() {
             `<p class="st-peu">encerts acumulats a cada tema · ${tema.sims} simulacres</p>`;
     }
 
+    const peuDetall = serie.some(tieneDetall) ? `<p class="st-peu">toca un simulacre amb ${ico('lupa')} per revisar-ne les preguntes</p>` : '';
+
     return filtros + `<div class="st-grid">${hero}` +
         `<div class="st-kpi"><small>última</small><b>${fmtNota(ultima)}</b><em class="${clase(r2(ultima) - r2(tall))}">${fmtDelta(ultima - tall)} vs tall</em></div>` +
         `<div class="st-kpi"><small>millor</small><b>${fmtNota(mejor)}</b><em>${n} ${n === 1 ? 'simulacre' : 'simulacres'}</em></div></div>` +
         tarjetaSetmana +
         `<div class="st-card"><h3>nota per simulacre</h3>${svgGraficoSim(serie)}` +
         `<p class="st-peu">${n >= 3 ? 'línia de punts blava = mitjana mòbil de 3 · ' : ''}punt verd = per sobre del tall</p></div>` +
-        `<div class="st-card"><h3>historial</h3>${filas}${mas}${peuPend}</div>` +
+        `<div class="st-card"><h3>historial</h3>${filas}${mas}${peuPend}${peuDetall}</div>` +
         `<div class="st-card"><h3>on perds punts (per tema)</h3>${htmlTema}</div>`;
 }
 
@@ -1787,6 +1819,295 @@ function htmlBloqueResultadoSim(fila) {
         (m3 !== null ? caja('mitjana 3', fmtNota(m3), `${fmtDelta(m3 - tall)} vs tall`, r2(m3) >= r2(tall) ? 'st-up' : 'st-dn') : caja('mitjana 3', '—', `${Math.min(idx + 1, 3)} de 3`)) +
         caja('setmana', `${semana}/${obj}`, semana >= obj ? 'objectiu complert' : `objectiu mínim ${obj}`) +
         `</div>`;
+}
+
+// =====================================================================
+// DETALL DELS SIMULACRES OFICIALS (pregunta per pregunta), per revisar-los des de l'historial
+// - Es guarda al mòbil en acabar i s'envia a la pestanya «SimulacresDetall» del Sheet (1 fila = 1 pregunta)
+//   quan «Config» té sync_detall = 1 (és a dir, l'Apps Script ja sap rebre'l).
+// - Es guarda una FOTO mínima de cada pregunta (enunciat, la teva resposta i la correcta en text): si després la
+//   pregunta s'edita o s'esborra del banc, la revisió no es trenca. L'extra NO es copia: es llegeix sempre en directe
+//   del Sheet, perquè l'útil per estudiar és la versió més nova de la xuleta.
+// =====================================================================
+const HOJA_DETALL = "SimulacresDetall";
+const CLAVE_DET_LOCAL = "cerebroSimDetall_v1";   // { idSimulacre: detall } (els últims, com a memòria cau)
+const CLAVE_DET_PEND = "cerebroSimDetallPend_v1"; // ids de simulacres amb el detall encara sense confirmar al Sheet
+const MAX_DETALLS_LOCALS = 20;
+const DETALL_DES_DE = 1794760000000; // 15/11/2026 ~17:30: els simulacres de l'app posteriors ja porten detall
+let detallesLocal = null;           // es llegeix de localStorage una sola vegada
+let ultimoIntentoEnvioDet = 0;
+
+function leerDetallesLocal() {
+    if (detallesLocal === null) {
+        const d = leerJSONSim(CLAVE_DET_LOCAL, {});
+        detallesLocal = (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
+    }
+    return detallesLocal;
+}
+function escribirDetallesLocal() {
+    const pend = new Set(leerJSONSim(CLAVE_DET_PEND, []));
+    // Es guarden els més recents; els pendents d'arribar al Sheet no s'esborren mai
+    const ids = Object.keys(detallesLocal).sort((a, b) => (detallesLocal[b].ts || 0) - (detallesLocal[a].ts || 0));
+    let conservats = 0;
+    ids.forEach(id => {
+        if (pend.has(id)) return;
+        if (++conservats > MAX_DETALLS_LOCALS) delete detallesLocal[id];
+    });
+    for (let intent = 0; intent < 5; intent++) {
+        try { localStorage.setItem(CLAVE_DET_LOCAL, JSON.stringify(detallesLocal)); return true; }
+        catch (e) {
+            // sense espai: es treu el més antic que ja sigui al Sheet i es torna a provar
+            const vell = Object.keys(detallesLocal).filter(id => !pend.has(id))
+                .sort((a, b) => (detallesLocal[a].ts || 0) - (detallesLocal[b].ts || 0))[0];
+            if (!vell) return false;
+            delete detallesLocal[vell];
+        }
+    }
+    return false;
+}
+
+// Foto del simulacre acabat. r: 'ok' | 'ko' | 'bl' · m: lletra marcada (la del Sheet) · ord: ordre en què es van veure les opcions
+function construirDetall(fila) {
+    const items = preguntas.map((q, i) => {
+        const resp = respuestasDadas[i];
+        const marcada = resp && !resp.blanca ? resp.elegida : '';
+        const res = !marcada ? 'bl' : (resp.acierto ? 'ok' : 'ko');
+        return {
+            id: String(q.id || ''), t: String(q.id || '').split('-')[0], tp: q.tipusPregunta || '',
+            r: res, m: marcada, c: q.correcta || '',
+            ord: (ordenOpciones[i] || []).map(o => o.id).join(''),
+            p: q.pregunta || '', tm: marcada ? (q[marcada] || '') : '', tc: q[q.correcta] || ''
+        };
+    });
+    return { sim: fila.id, ts: fila.ts, items: items };
+}
+
+function guardarDetallLocal(det) {
+    if (!det || !det.items.length) return;
+    leerDetallesLocal()[det.sim] = det;
+    const pend = leerJSONSim(CLAVE_DET_PEND, []);
+    if (!pend.includes(det.sim)) { pend.push(det.sim); guardarJSONSim(CLAVE_DET_PEND, pend); }
+    escribirDetallesLocal();
+}
+
+// Té (o hauria de tenir) detall: el tenim al mòbil, o és un simulacre de l'app posterior a aquesta versió
+function tieneDetall(r) {
+    if (!r || !r.id) return false;
+    if (leerDetallesLocal()[r.id]) return true;
+    return /^s[a-z0-9]+$/.test(r.id) && r.ts > DETALL_DES_DE;
+}
+
+// Llegeix del Sheet NOMÉS les files d'un simulacre (consulta gviz amb where): no cal baixar tota la pestanya
+async function pedirDetallSheet(simId) {
+    if (!/^[A-Za-z0-9_-]{3,40}$/.test(simId)) return null;
+    const tq = encodeURIComponent(`select * where A = '${simId}'`);
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(HOJA_DETALL)}&tq=${tq}&t=` + Date.now();
+    const text = await fetchTextoConTimeout(url);
+    const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    if (json.status === 'error' || !json.table || !Array.isArray(json.table.rows)) return null; // p. ex. la pestanya encara no existeix
+    const RES = { 'ok': 'ok', 'error': 'ko', 'en blanc': 'bl' };
+    let ts = 0;
+    const items = json.table.rows.filter(r => r && r.c).map(r => {
+        const c = i => (r.c[i] && r.c[i].v != null) ? String(r.c[i].v) : '';
+        if (c(0).trim() !== simId) return null;
+        return {
+            n: parseInt(c(2), 10) || 0, id: c(3).trim(), t: c(4).trim(), tp: c(5).trim(),
+            r: RES[c(6).trim().toLowerCase()] || 'bl', m: c(7).trim().toLowerCase(), c: c(8).trim().toLowerCase(),
+            ord: c(9).trim().toLowerCase(), p: c(10), tm: c(11), tc: c(12)
+        };
+    }).filter(Boolean).sort((a, b) => a.n - b.n);
+    if (!items.length) return null;
+    const sim = todosSimulacros().find(s => s.id === simId);
+    if (sim) ts = sim.ts;
+    return { sim: simId, ts: ts, items: items };
+}
+
+async function obtenerDetall(simId) {
+    const local = leerDetallesLocal()[simId];
+    if (local) return local;
+    if (!navigator.onLine) return null;
+    const det = await pedirDetallSheet(simId);
+    if (det) { leerDetallesLocal()[simId] = det; escribirDetallesLocal(); } // memòria cau: el pròxim cop s'obre a l'instant
+    return det;
+}
+
+// Envia els detalls pendents. El POST no-cors no confirma res: es dona per bo quan les files apareixen al Sheet.
+async function enviarPendientesDetall() {
+    if (!configSim.syncDetall || !navigator.onLine) return;
+    const ahora = Date.now();
+    if (ahora - ultimoIntentoEnvioDet < 30000) return;
+    let pend = leerJSONSim(CLAVE_DET_PEND, []);
+    const locals = leerDetallesLocal();
+    pend = pend.filter(id => locals[id]);
+    if (!pend.length) { guardarJSONSim(CLAVE_DET_PEND, []); return; }
+    ultimoIntentoEnvioDet = ahora;
+    for (const id of pend) {
+        const det = locals[id];
+        const files = det.items.map((it, i) => [i + 1, it.id, it.t, it.tp, it.r, it.m, it.c, it.ord, it.p, it.tm, it.tc]);
+        try {
+            await fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({ action: "guardar_detall_simulacre", data: JSON.stringify({ sim: id, ts: det.ts, files: files }) })
+            });
+        } catch (e) { console.error("Error enviant el detall del simulacre", e); return; }
+    }
+    await esperar(ESPERA_ESCRITURA_SIM_MS);
+    const confirmats = [];
+    for (const id of pend) {
+        try {
+            const enSheet = await pedirDetallSheet(id);
+            if (enSheet && enSheet.items.length >= locals[id].items.length) confirmats.push(id);
+        } catch (e) { /* es reintentarà */ }
+    }
+    if (confirmats.length) {
+        guardarJSONSim(CLAVE_DET_PEND, leerJSONSim(CLAVE_DET_PEND, []).filter(id => !confirmats.includes(id)));
+        escribirDetallesLocal();
+    }
+}
+
+// --- Revisió d'un simulacre de l'historial ---
+let preguntasRepasDetall = []; // les fallades i en blanc que encara existeixen (per al botó «repassar»)
+
+async function abrirDetallSimulacro(simId) {
+    const sim = todosSimulacros().find(s => s.id === simId);
+    prepararPantallaRevision('stats', '', '');
+    document.getElementById("resum-revision").textContent = sim ? `${fechaCorta(sim.ts)} · ${horaCorta(sim.ts)} · nota ${fmtNota(notaSimulacro(sim))}` : '';
+    document.getElementById("filtres-revision").classList.add("oculto");
+    document.getElementById("rev-buit").classList.add("oculto");
+    document.getElementById("lista-revision").innerHTML = `<p class="rev-buit">Carregant el simulacre…</p>`;
+    document.getElementById("pantalla-stats").classList.add("oculto");
+    document.getElementById("pantalla-revision").classList.remove("oculto");
+    window.scrollTo(0, 0);
+
+    let det = null;
+    try { det = await obtenerDetall(simId); } catch (e) { console.warn("No s'ha pogut llegir el detall", e); }
+    if (origenRevision !== 'stats') return; // ha tornat enrere mentre carregava
+    if (!det) {
+        document.getElementById("lista-revision").innerHTML = `<p class="rev-buit">${navigator.onLine
+            ? "Aquest simulacre no té detall guardat (és d'abans d'aquesta funció o encara no ha arribat al Sheet)."
+            : "Sense connexió i sense còpia d'aquest simulacre al mòbil. Torna-ho a provar amb connexió."}</p>`;
+        return;
+    }
+
+    // Versió ACTUAL de les preguntes (i del seu extra): només els temes que hi surten
+    const temas = [...new Set(det.items.map(it => it.t).filter(Boolean))];
+    const actuals = new Map();
+    const temasOk = new Set();
+    if (navigator.onLine) {
+        const res = await Promise.allSettled(temas.map(t => cargarPreguntas(t, true)));
+        res.forEach((r, i) => {
+            if (r.status !== 'fulfilled' || !r.value.length) return;
+            temasOk.add(temas[i]);
+            r.value.forEach(q => { if (q.id) actuals.set(q.id, q); });
+        });
+    }
+    if (origenRevision !== 'stats') return;
+    pintarDetallSimulacro(det, actuals, temasOk);
+}
+
+function pintarDetallSimulacro(det, actuals, temasOk) {
+    const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+    const items = det.items;
+    const nOk = items.filter(it => it.r === 'ok').length;
+    const nKo = items.filter(it => it.r === 'ko').length;
+    const nBl = items.length - nOk - nKo;
+    let nEditades = 0, nEliminades = 0;
+
+    const html = items.map((it, i) => {
+        const q = actuals.get(it.id);
+        // viva · editada (ha canviat l'enunciat o la resposta correcta) · eliminada · desconeguda (el tema no s'ha pogut carregar)
+        const estatQ = q ? ((norm(q.pregunta) !== norm(it.p) || norm(q[q.correcta]) !== norm(it.tc)) ? 'editada' : 'viva')
+                         : (temasOk.has(it.t) ? 'eliminada' : 'desconeguda');
+        if (estatQ === 'editada') nEditades++;
+        if (estatQ === 'eliminada') nEliminades++;
+        const estat = it.r === 'ok' ? 'ok' : (it.r === 'ko' ? 'ko' : 'blanc');
+        const chip = estat === 'ok'
+            ? `<span class="chip c-ok">${ico('check')}correcta</span>`
+            : estat === 'ko' ? `<span class="chip c-ko">${ico('x')}error</span>`
+            : `<span class="chip c-neutro">${ico('circulo')}en blanc</span>`;
+        const marca = estatQ === 'editada' ? `<span class="chip c-info rev-marca">editada després</span>`
+            : estatQ === 'eliminada' ? `<span class="chip c-neutro rev-marca">ja no és al banc</span>` : '';
+        const tema = escapeHTML(getNombreTema(it.t));
+
+        let cos;
+        if (q) {
+            // Opcions de la versió actual, en l'ordre en què les vas veure
+            const base = [{ texto: q.a, id: 'a' }, { texto: q.b, id: 'b' }, { texto: q.c, id: 'c' }, { texto: q.d, id: 'd' }].filter(o => o.texto);
+            const vistes = (it.ord || '').split('').map(l => base.find(o => o.id === l)).filter(Boolean);
+            const orden = vistes.length === base.length ? vistes : base;
+            const ops = orden.map((o, k) => {
+                let clases = "opcion estatica", icono = "";
+                if (o.id === q.correcta) { clases += " ok"; icono = ico('check'); }
+                else if (o.id === it.m && estat === 'ko') { clases += " ko"; icono = ico('x'); }
+                const letra = MOSTRAR_LETRAS ? `<span class="letra">${"ABCD"[k] || ""}</span>` : "";
+                return `<div class="${clases}">${letra}<span class="op-texto">${o.texto}</span><span class="op-icono">${icono}</span></div>`;
+            }).join("");
+            const comEra = estatQ === 'editada'
+                ? `<details class="rev-extra rev-abans"><summary>${ico('reloj')}Com era el dia del simulacre</summary><div class="rev-foto">` +
+                  `<p>${escapeHTML(it.p)}</p>` +
+                  (it.tm && estat === 'ko' ? `<p class="ko">${ico('x')}<span>${escapeHTML(it.tm)}</span></p>` : '') +
+                  `<p class="ok">${ico('check')}<span>${escapeHTML(it.tc)}</span></p></div></details>` : '';
+            const extra = prepararContenidoExtra(q);
+            const extraHTML = extra
+                ? `<details class="rev-extra"><summary>${ico('lupa')}Informació extra</summary><div class="contenido">${extra}</div></details>` : "";
+            cos = `<p class="q-texto">${q.pregunta}</p><div class="rev-ops">${ops}</div>${comEra}${extraHTML}`;
+        } else {
+            // Foto guardada: l'enunciat, el que vas marcar i la correcta (sense extra)
+            const ops = (it.tm && estat === 'ko'
+                ? `<div class="opcion estatica ko"><span class="op-texto">${escapeHTML(it.tm)}</span><span class="op-icono">${ico('x')}</span></div>` : '') +
+                `<div class="opcion estatica ok"><span class="op-texto">${escapeHTML(it.tc)}</span><span class="op-icono">${ico('check')}</span></div>`;
+            const nota = estatQ === 'eliminada'
+                ? `<p class="st-peu">Aquesta pregunta ja no és al banc: es veu tal com era el dia del simulacre, sense extra.</p>`
+                : `<p class="st-peu">No s'ha pogut carregar el tema ara mateix: es veu la foto del dia del simulacre.</p>`;
+            cos = `<p class="q-texto">${escapeHTML(it.p)}</p><div class="rev-ops">${ops}</div>${nota}`;
+        }
+        return `<article class="rev-card" data-estat="${estat}">
+            <div class="rev-cab"><span class="q-tema">${tema}</span>${chip}${marca}<span class="rev-num">#${i + 1}</span></div>
+            ${cos}
+        </article>`;
+    }).join("");
+
+    // On has fallat, per tipus de pregunta (errors + en blanc). Amb el tipus actual si la pregunta encara hi és.
+    const perTipus = {};
+    items.forEach(it => {
+        if (it.r === 'ok') return;
+        const q = actuals.get(it.id);
+        const tp = (q && q.tipusPregunta) || it.tp || 'sense tipus';
+        perTipus[tp] = (perTipus[tp] || 0) + 1;
+    });
+    const tipus = Object.entries(perTipus).sort((a, b) => b[1] - a[1]);
+    const htmlTipus = tipus.length
+        ? `<div class="rev-tipus"><small>errors i en blanc per tipus</small><div>${tipus.map(([t, n]) => `<span class="chip c-neutro">${escapeHTML(t)} <b>${n}</b></span>`).join('')}</div></div>` : '';
+    const avisos = (nEditades || nEliminades)
+        ? `<p class="st-peu">${[nEditades ? `${nEditades} ${nEditades === 1 ? 'pregunta editada' : 'preguntes editades'} des de llavors (es veu la versió nova)` : '',
+            nEliminades ? `${nEliminades} que ja no ${nEliminades === 1 ? 'és' : 'són'} al banc` : ''].filter(Boolean).join(' · ')}</p>` : '';
+
+    preguntasRepasDetall = items.filter(it => it.r !== 'ok').map(it => actuals.get(it.id)).filter(Boolean);
+    const accions = preguntasRepasDetall.length
+        ? `<button class="btn btn-cta" onclick="repasarFalladesDetall()">${ico('adelante')}Repassar errors i en blanc (${preguntasRepasDetall.length})</button>` : '';
+
+    document.getElementById("rev-n-tot").textContent = items.length;
+    document.getElementById("rev-n-err").textContent = nKo + nBl;
+    document.getElementById("rev-n-ok").textContent = nOk;
+    document.getElementById("rev-cap-extra").innerHTML = htmlTipus + avisos;
+    document.getElementById("rev-accions").innerHTML = accions;
+    document.getElementById("filtres-revision").classList.remove("oculto");
+    document.getElementById("lista-revision").innerHTML = html;
+    filtrarRevision(nKo + nBl > 0 ? 'errors' : 'tot'); // s'obre pel que interessa: el que vas fallar
+}
+
+// Test normal (amb correcció i SRS) amb les fallades i en blanc d'aquell simulacre que encara existeixen
+function repasarFalladesDetall() {
+    if (!preguntasRepasDetall.length) return;
+    esSimulacroLargo = false;
+    modoCiegas = false;
+    modoExamen = null;
+    simulacroActual = null;
+    preguntas = [...preguntasRepasDetall];
+    mezclar(preguntas);
+    document.getElementById("pantalla-revision").classList.add("oculto");
+    iniciarTest();
 }
 
 // 7. --- ALGORITMO DE MEMORIA ESPACIADA (SRS) ---
