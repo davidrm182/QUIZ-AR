@@ -644,6 +644,26 @@
             padding: 12px; font-size: 15px; line-height: 1.6; overflow: auto;
         }
         .rev-extra img { max-width: 100%; height: auto; border-radius: 6px; }
+        /* Revisió d'un simulacre de l'historial */
+        .rev-cap-extra { display: flex; flex-direction: column; gap: 8px; }
+        .rev-cap-extra:empty, .rev-accions:empty { display: none; }
+        .rev-tipus small { display: block; font: 600 12px 'Inter', sans-serif; color: var(--muted); margin-bottom: 6px; }
+        .rev-tipus > div { display: flex; flex-wrap: wrap; gap: 6px; }
+        .rev-tipus b { margin-left: 4px; }
+        .rev-marca { font-size: 11px; }
+        .rev-accions { display: flex; flex-direction: column; gap: 10px; }
+        .rev-foto { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px dashed var(--line); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.45; }
+        .rev-foto p { margin: 0; display: flex; gap: 8px; align-items: flex-start; }
+        .rev-foto p.ok { color: var(--ok-ink); }
+        .rev-foto p.ko { color: var(--ko-ink); }
+        .rev-foto .ico { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+        button.st-fila { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; text-align: left; cursor: pointer; padding-left: 0; padding-right: 0; }
+        .st-fila.primera { border-top: 0; }
+        .st-fila .lp { width: 18px; flex: none; display: grid; place-items: center; color: var(--info); }
+        .st-fila .lp .ico { width: 16px; height: 16px; }
+        button.st-fila:hover b, button.st-fila:focus-visible b { color: var(--cta); }
+        button.st-fila:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; border-radius: 8px; }
+        .st-peu .ico { width: 13px; height: 13px; vertical-align: -2px; }
 
         /* =====================================================================
            MODAL DE LA LUPA (info extra). Sempre fosc: el contingut ve del Sheet i està pensat per a fons fosc.
@@ -1102,9 +1122,10 @@
                 <button type="button" class="btn-tema" onclick="cerrarRevision()" aria-label="Tornar al resultat" title="Tornar al resultat">
                     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
                 </button>
-                <h2>revisió de respostes</h2>
+                <h2 id="titol-revision">revisió de respostes</h2>
             </div>
             <div id="resum-revision" class="sec-label"></div>
+            <div id="rev-cap-extra" class="rev-cap-extra"></div>
             <div id="filtres-revision" class="filtres-rev" role="group" aria-label="Filtrar respostes">
                 <button type="button" class="filtre-rev" data-filtre="tot" aria-pressed="true" onclick="filtrarRevision('tot')">Totes <b id="rev-n-tot">0</b></button>
                 <button type="button" class="filtre-rev" data-filtre="errors" aria-pressed="false" onclick="filtrarRevision('errors')">Errors i en blanc <b id="rev-n-err">0</b></button>
@@ -1112,13 +1133,14 @@
             </div>
             <p id="rev-buit" class="rev-buit oculto"></p>
             <div id="lista-revision" class="lista-rev" data-filtre="tot"></div>
-            <button onclick="cerrarRevision()" class="btn btn-cta">tornar al resultat</button>
+            <div id="rev-accions" class="rev-accions"></div>
+            <button id="btn-tornar-revision" onclick="cerrarRevision()" class="btn btn-outline">tornar al resultat</button>
         </div>
 
     </div>
 
-    <!-- VERSIÓ 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
-    <script src="motor.js?v=7.1"></script>
+    <!-- VERSIÓ 7.2: revisió dels simulacres de l'historial (pregunta per pregunta, amb l'extra en directe) · 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
+    <script src="motor.js?v=7.2"></script>
 </body>
 
 </html>
