@@ -1737,11 +1737,10 @@ function htmlStats() {
     }
 
     const notas = serie.map(notaSimulacro);
-    const ultima = notas[n - 1], mejor = Math.max(...notas), m3 = mediaUltimas(serie, 3);
+    const ultima = notas[n - 1], mejor = Math.max(...notas);
+    const mHist = notas.reduce((a, b) => a + b, 0) / n;   // mitjana històrica: tots els simulacres del filtre
     const clase = d => d >= 0 ? 'st-up' : 'st-dn';
-    const hero = m3 === null
-        ? `<div class="st-kpi hero"><small>mitjana de les últimes 3</small><b>—</b><em>cal tenir 3 simulacres (en tens ${n}) · tall ${fmtNota(tall)}</em></div>`
-        : `<div class="st-kpi hero"><small>mitjana de les últimes 3</small><b>${fmtNota(m3)}</b><em class="${clase(r2(m3) - r2(tall))}">${fmtDelta(m3 - tall)} ${m3 >= tall ? 'per sobre' : 'per sota'} del tall ${fmtNota(tall)}</em></div>`;
+    const hero = `<div class="st-kpi hero"><small>mitjana històrica · ${n} ${n === 1 ? 'simulacre' : 'simulacres'}</small><b>${fmtNota(mHist)}</b><em class="${clase(r2(mHist) - r2(tall))}">${fmtDelta(mHist - tall)} ${mHist >= tall ? 'per sobre' : 'per sota'} del tall ${fmtNota(tall)}</em></div>`;
 
     const filas = [...serie].reverse().slice(0, MAX_FILES_HISTORIAL).map((r, i) => {
         const nota = notaSimulacro(r);
@@ -1796,7 +1795,7 @@ function pintarEstadisticas() {
     if (cont) cont.innerHTML = htmlStats();
 }
 
-// Bloc del resultat d'un simulacre oficial: nota vs tall, comparació amb l'anterior, mitjana de 3 i objectiu setmanal.
+// Bloc del resultat d'un simulacre oficial: nota vs tall, comparació amb l'anterior, mitjana històrica i objectiu setmanal.
 function htmlBloqueResultadoSim(fila) {
     if (!fila) return '';
     if (!esComparable(fila)) {
@@ -1807,7 +1806,7 @@ function htmlBloqueResultadoSim(fila) {
     const idx = comp.findIndex(r => r.id === fila.id);
     const nota = notaSimulacro(fila), tall = configSim.tall;
     const prev = idx > 0 ? comp[idx - 1] : null;
-    const m3 = idx >= 2 ? comp.slice(idx - 2, idx + 1).map(notaSimulacro).reduce((a, b) => a + b, 0) / 3 : null;
+    const mHist = comp.slice(0, idx + 1).map(notaSimulacro).reduce((a, b) => a + b, 0) / (idx + 1); // mitjana històrica fins a aquest simulacre
     const record = idx > 0 && r2(nota) > Math.max(...comp.slice(0, idx).map(r => r2(notaSimulacro(r))));
     const dif = r2(nota) - r2(tall), pasa = dif >= 0;
     const pct = v => Math.max(0, Math.min(100, (v - 5) / 5 * 100));
@@ -1821,7 +1820,7 @@ function htmlBloqueResultadoSim(fila) {
         (record ? `<div class="chips centrado st-record"><span class="chip c-ok">${ico('check')}nova millor nota</span></div>` : '') +
         `<div class="st-comp">` +
         (prev ? caja('vs anterior', fmtDelta(dPrev), fmtNota(notaSimulacro(prev)), r2(dPrev) > 0 ? 'st-up' : r2(dPrev) < 0 ? 'st-dn' : '') : caja('vs anterior', '—', 'primer registrat')) +
-        (m3 !== null ? caja('mitjana 3', fmtNota(m3), `${fmtDelta(m3 - tall)} vs tall`, r2(m3) >= r2(tall) ? 'st-up' : 'st-dn') : caja('mitjana 3', '—', `${Math.min(idx + 1, 3)} de 3`)) +
+        caja('mitjana històrica', fmtNota(mHist), `${fmtDelta(mHist - tall)} vs tall · ${idx + 1} sims`, r2(mHist) >= r2(tall) ? 'st-up' : 'st-dn') +
         caja('setmana', `${semana}/${obj}`, semana >= obj ? 'objectiu complert' : `objectiu mínim ${obj}`) +
         `</div>`;
 }
