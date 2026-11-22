@@ -22,6 +22,7 @@ let blancas = 0;
 let respondida = false;
 let esSimulacroLargo = false; // simulacres i exàmens oficials: es poden deixar preguntes en blanc (i es compta "en blanc")
 let modoCiegas = false; // simulacre "a cegues": sense correcció ni comptadors d'encerts/errors fins al final (només es veu el d'en blanc; només si s'activa a l'inici)
+let modoFavs = false; // test de preferides: les respostes NO es guarden al SRS (SRS_Datos)
 
 // --- INTERFÍCIE: opcions d'estudi, tema i icones (res d'això toca el SRS) ---
 const MOSTRAR_LETRAS = true; // lletres A–D davant de cada opció (true/false)
@@ -682,6 +683,7 @@ function filtrarPreguntasPorDificultad(listaTema, cantidad, nivel) {
 async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
     esSimulacroLargo = true; // tots els simulacres (Oficial, Light i Ultra) es poden deixar en blanc, com un examen real
     modoCiegas = leerOpcion('cegues'); // només els simulacres (i els exàmens oficials) poden anar a cegues
+    modoFavs = false;
     modoExamen = null;
     simulacroActual = { tipus: tipo, dificultat: dificultad }; // si és l'Oficial, en acabar es registra a les estadístiques
 
@@ -721,6 +723,7 @@ async function prepararSimulacro(tipo, botonClicado, dificultad = 'tots') {
 async function prepararQuiz(){
     esSimulacroLargo = false;
     modoCiegas = false;
+    modoFavs = false;
     modoExamen = null;
     simulacroActual = null;
     const checks = document.querySelectorAll(".tema-check:checked");
@@ -759,6 +762,7 @@ async function prepararQuiz(){
 function prepararQuizFavs(){
     esSimulacroLargo = false;
     modoCiegas = false;
+    modoFavs = true; // test de preferides: no toca el SRS
     modoExamen = null;
     simulacroActual = null;
     if(favoritosCloud.length === 0){ alert("No tens preferides desades"); return; }
@@ -969,6 +973,7 @@ async function prepararExamen(examId, botonClicado) {
         modoExamen = { id: ex.id, nombre: ex.nombre, reservas: reservas, enReservas: false };
         esSimulacroLargo = true;
         modoCiegas = leerOpcion('cegues');
+        modoFavs = false;
         simulacroActual = null;
         restaurar();
         iniciarTest();
@@ -2102,6 +2107,7 @@ function repasarFalladesDetall() {
     if (!preguntasRepasDetall.length) return;
     esSimulacroLargo = false;
     modoCiegas = false;
+    modoFavs = false;
     modoExamen = null;
     simulacroActual = null;
     preguntas = [...preguntasRepasDetall];
@@ -2140,6 +2146,8 @@ function actualizarSRS(idPregunta, acertada) {
     if (!idPregunta) { console.warn("Pregunta sense ID, no es guarda al SRS."); return; }
     // Les preguntes dels exàmens oficials (ids "exCCCC-NNN") no entren mai al SRS, ni des de l'examen ni des de les preferides
     if (ES_ID_EXAMEN.test(String(idPregunta))) return;
+    // Les respostes fetes des del test de preferides tampoc compten per al SRS
+    if (modoFavs) return;
 
     let stats = cerebroSRS[idPregunta] || { racha: 0, facilidad: FACILIDAD_INICIAL, intervalo: 0, proximoRepaso: 0, fallosTotales: 0 };
 
@@ -2285,6 +2293,7 @@ async function prepararRepasoInteligente() {
 
         esSimulacroLargo = false;
         modoCiegas = false;
+        modoFavs = false;
         modoExamen = null;
         simulacroActual = null;
         iniciarTest();
