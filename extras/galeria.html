@@ -23,6 +23,9 @@
   .tema small { color: var(--muted); font-weight: 400; margin-left: 4px; }
   .tema.on { background: var(--cta); color: var(--cta-ink); border-color: var(--cta); }
   .tema.on small { color: var(--cta-ink); }
+  .tema.nou { border-color: var(--cta); }
+  .data { display: inline-block; background: var(--surface); color: var(--text); border-radius: 4px;
+          padding: 0 5px; font-size: 11px; margin-right: 4px; }
   input[type=search] { width: 100%; margin-top: 6px; padding: 8px 10px; border-radius: 8px;
           border: 1px solid var(--line-soft); background: var(--card); color: var(--text); font-size: 15px; }
   main { padding: 12px; }
@@ -57,7 +60,8 @@
   const BASE = 'https://davidrm182.github.io/QUIZ-AR/';
   const IMG = /\.(png|jpe?g|gif|webp|svg)$/i;
   const TEMA = /^extras\/(t[ge]\d+)\//;
-  let perTema = {}, actiu = null;
+  let perTema = {}, actiu = null, novetats = null;
+  const NOU = 'nou', MAX_NOU = 30, MAX_COMMITS = 8;
 
   const kb = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB';
   const ordre = t => (t.startsWith('tg') ? 0 : 100) + parseInt(t.slice(2), 10);
@@ -81,10 +85,12 @@
     const q = document.getElementById('cerca').value.trim().toLowerCase();
     const g = document.getElementById('graella'), estat = document.getElementById('estat');
     g.innerHTML = '';
-    let fitxers = q ? Object.values(perTema).flat() : (perTema[actiu] || []);
+    const esNou = !q && actiu === NOU;
+    if (esNou && novetats === null) { estat.style.display = 'block'; estat.textContent = 'Buscant les últimes pujades…'; return; }
+    let fitxers = q ? Object.values(perTema).flat() : (esNou ? novetats : (perTema[actiu] || []));
     if (q) fitxers = fitxers.filter(f => f.path.toLowerCase().includes(q));
     estat.style.display = fitxers.length ? 'none' : 'block';
-    estat.textContent = q ? 'Cap imatge amb aquest nom.' : 'Aquest tema encara no té imatges.';
+    estat.textContent = q ? 'Cap imatge amb aquest nom.' : (esNou ? 'No hi ha pujades recents.' : 'Aquest tema encara no té imatges.');
     for (const f of fitxers) {
       const nom = f.path.split('/').pop();
       const el = document.createElement('div'); el.className = 'item';
@@ -93,7 +99,11 @@
         '<img loading="lazy" src="' + f.path.replace('extras/', '') + '" alt=""></a>' +
         '<div class="peu"><div class="nom"></div><div class="pes"></div>' +
         '<div class="botons"><button class="sheet">Sheet</button><button class="url">URL</button></div></div>';
-      el.querySelector('.nom').textContent = (q ? f.path.split('/')[1] + ' · ' : '') + nom;
+      el.querySelector('.nom').textContent = (q || esNou ? f.path.split('/')[1] + ' · ' : '') + nom;
+      if (esNou && f.data) {
+        const d = document.createElement('span'); d.className = 'data'; d.textContent = quan(f.data);
+        el.querySelector('.nom').prepend(d);
+      }
       el.querySelector('.pes').textContent = kb(f.size);
       el.querySelector('.sheet').onclick = e => copia(snippet(f.path), e.target, 'Sheet');
       el.querySelector('.url').onclick = e => copia(BASE + f.path, e.target, 'URL');
@@ -101,12 +111,53 @@
     }
   }
 
-  function triaTema(t) {
+  function quan(iso) {
+    const d = new Date(iso), avui = new Date();
+    const dies = Math.floor((new Date(avui.toDateString()) - new Date(d.toDateString())) / 86400000);
+    const hora = d.toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' });
+    if (dies === 0) return 'avui ' + hora;
+    if (dies === 1) return 'ahir ' + hora;
+    return d.toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit' });
+  }
+
+  async function carregaNovetats() {
+    try {
+      const c = JSON.parse(sessionStorage.getItem('galeria-novetats') || 'null');
+      if (c && Date.now() - c.t < 10 * 60 * 1000) { novetats = c.l; return; }
+    } catch (e) {}
+    const existeix = new Set(Object.values(perTema).flat().map(f => f.path));
+    const mida = {}; Object.values(perTema).flat().forEach(f => mida[f.path] = f.size);
+    const vist = new Set(), llista = [];
+    try {
+      const r = await fetch('https://api.github.com/repos/' + REPO + '/commits?path=extras&per_page=' + MAX_COMMITS);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      for (const c of await r.json()) {
+        if (llista.length >= MAX_NOU) break;
+        const d = await fetch(c.url);
+        if (!d.ok) continue;
+        const det = await d.json(), data = det.commit.author.date;
+        for (const f of det.files || []) {
+          if (f.status === 'removed' || vist.has(f.filename) || !existeix.has(f.filename)) continue;
+          vist.add(f.filename);
+          llista.push({ path: f.filename, size: mida[f.filename], data });
+          if (llista.length >= MAX_NOU) break;
+        }
+      }
+      novetats = llista;
+      try { sessionStorage.setItem('galeria-novetats', JSON.stringify({ t: Date.now(), l: llista })); } catch (e) {}
+    } catch (e) {
+      novetats = [];
+      document.getElementById('estat').textContent = "No s'han pogut llegir les novetats (" + e.message + ').';
+    }
+  }
+
+  async function triaTema(t) {
     actiu = t;
     document.querySelectorAll('.tema').forEach(b => b.classList.toggle('on', b.dataset.t === t));
     document.getElementById('cerca').value = '';
     try { localStorage.setItem('galeria-tema', t); } catch (e) {}
     pinta();
+    if (t === NOU && novetats === null) { await carregaNovetats(); if (actiu === NOU) pinta(); }
   }
 
   async function carrega() {
@@ -127,6 +178,8 @@
     const total = Object.values(perTema).reduce((s, l) => s + l.length, 0);
     document.getElementById('total').textContent = '· ' + total + ' imatges';
     const cont = document.getElementById('temes');
+    const bn = document.createElement('button'); bn.className = 'tema nou'; bn.dataset.t = NOU;
+    bn.textContent = '🆕 Novetats'; bn.onclick = () => triaTema(NOU); cont.appendChild(bn);
     for (const t of temes) {
       perTema[t].sort((a, b) => a.path.localeCompare(b.path));
       const b = document.createElement('button'); b.className = 'tema'; b.dataset.t = t;
@@ -135,7 +188,7 @@
       cont.appendChild(b);
     }
     let guardat = null; try { guardat = localStorage.getItem('galeria-tema'); } catch (e) {}
-    triaTema(perTema[guardat] ? guardat : temes[0]);
+    triaTema(guardat === NOU || perTema[guardat] ? guardat : temes[0]);
   }
 
   document.getElementById('cerca').addEventListener('input', pinta);
