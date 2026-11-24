@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galeria d'extres · Opos Agent Rural</title>
+<style>
+  :root {
+    --bg: #1E3A2B; --surface: #33604D; --card: #24473A; --line-soft: #4C8069;
+    --text: #E9EFE6; --muted: #CBDCD0; --cta: #F2B134; --cta-ink: #1A1205;
+    --ok: #58D07D; --ok-ink: #06180D;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); color: var(--text);
+           padding: 12px 14px 8px; border-bottom: 1px solid var(--line-soft); }
+  h1 { margin: 0 0 8px; font-size: 18px; color: var(--text); background: transparent; }
+  h1 span { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .temes { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+  .tema { flex: 0 0 auto; border: 1px solid var(--line-soft); background: var(--card); color: var(--text);
+          border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .tema small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .tema.on { background: var(--cta); color: var(--cta-ink); border-color: var(--cta); }
+  .tema.on small { color: var(--cta-ink); }
+  input[type=search] { width: 100%; margin-top: 6px; padding: 8px 10px; border-radius: 8px;
+          border: 1px solid var(--line-soft); background: var(--card); color: var(--text); font-size: 15px; }
+  main { padding: 12px; }
+  .estat { color: var(--muted); background: transparent; text-align: center; padding: 30px 10px; }
+  .graella { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .item { background: var(--card); color: var(--text); border: 1px solid var(--line-soft);
+          border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .item a.mini { display: block; aspect-ratio: 1 / 1; background: #ffffff; }
+  .item img { width: 100%; height: 100%; object-fit: contain; display: block; background: #ffffff; }
+  .peu { padding: 6px 7px 7px; background: var(--card); color: var(--text); }
+  .nom { font-size: 12px; line-height: 1.25; word-break: break-all; color: var(--text); }
+  .pes { font-size: 11px; color: var(--muted); margin: 2px 0 5px; }
+  .botons { display: flex; gap: 5px; }
+  .botons button { flex: 1; border: 0; border-radius: 6px; padding: 6px 4px; font-size: 12px; font-weight: 700;
+          cursor: pointer; background: var(--surface); color: var(--text); }
+  .botons button.sheet { background: var(--cta); color: var(--cta-ink); }
+  .botons button.fet { background: var(--ok); color: var(--ok-ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🖼️ Galeria d'extres <span id="total"></span></h1>
+  <div class="temes" id="temes"></div>
+  <input type="search" id="cerca" placeholder="Cerca pel nom (p. ex. mapa, eei, infocat…)">
+</header>
+<main>
+  <div class="estat" id="estat">Carregant les carpetes del repo…</div>
+  <div class="graella" id="graella"></div>
+</main>
+<script>
+  const REPO = 'davidrm182/QUIZ-AR';
+  const BASE = 'https://davidrm182.github.io/QUIZ-AR/';
+  const IMG = /\.(png|jpe?g|gif|webp|svg)$/i;
+  const TEMA = /^extras\/(t[ge]\d+)\//;
+  let perTema = {}, actiu = null;
+
+  const kb = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB';
+  const ordre = t => (t.startsWith('tg') ? 0 : 100) + parseInt(t.slice(2), 10);
+
+  function snippet(path) {
+    return '<div style="text-align:center;"><img src="' + BASE + path +
+      '" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #795548;"></div>';
+  }
+
+  async function copia(text, boto, etiqueta) {
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t);
+      t.select(); document.execCommand('copy'); t.remove();
+    }
+    boto.textContent = '✓ Copiat'; boto.classList.add('fet');
+    setTimeout(() => { boto.textContent = etiqueta; boto.classList.remove('fet'); }, 1400);
+  }
+
+  function pinta() {
+    const q = document.getElementById('cerca').value.trim().toLowerCase();
+    const g = document.getElementById('graella'), estat = document.getElementById('estat');
+    g.innerHTML = '';
+    let fitxers = q ? Object.values(perTema).flat() : (perTema[actiu] || []);
+    if (q) fitxers = fitxers.filter(f => f.path.toLowerCase().includes(q));
+    estat.style.display = fitxers.length ? 'none' : 'block';
+    estat.textContent = q ? 'Cap imatge amb aquest nom.' : 'Aquest tema encara no té imatges.';
+    for (const f of fitxers) {
+      const nom = f.path.split('/').pop();
+      const el = document.createElement('div'); el.className = 'item';
+      el.innerHTML =
+        '<a class="mini" href="' + f.path.replace('extras/', '') + '" target="_blank" rel="noopener">' +
+        '<img loading="lazy" src="' + f.path.replace('extras/', '') + '" alt=""></a>' +
+        '<div class="peu"><div class="nom"></div><div class="pes"></div>' +
+        '<div class="botons"><button class="sheet">Sheet</button><button class="url">URL</button></div></div>';
+      el.querySelector('.nom').textContent = (q ? f.path.split('/')[1] + ' · ' : '') + nom;
+      el.querySelector('.pes').textContent = kb(f.size);
+      el.querySelector('.sheet').onclick = e => copia(snippet(f.path), e.target, 'Sheet');
+      el.querySelector('.url').onclick = e => copia(BASE + f.path, e.target, 'URL');
+      g.appendChild(el);
+    }
+  }
+
+  function triaTema(t) {
+    actiu = t;
+    document.querySelectorAll('.tema').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+    document.getElementById('cerca').value = '';
+    try { localStorage.setItem('galeria-tema', t); } catch (e) {}
+    pinta();
+  }
+
+  async function carrega() {
+    const estat = document.getElementById('estat');
+    try {
+      const r = await fetch('https://api.github.com/repos/' + REPO + '/git/trees/main?recursive=1');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const arbre = (await r.json()).tree || [];
+      for (const n of arbre) {
+        const m = n.type === 'blob' && IMG.test(n.path) && n.path.match(TEMA);
+        if (m) (perTema[m[1]] = perTema[m[1]] || []).push({ path: n.path, size: n.size });
+      }
+    } catch (e) {
+      estat.textContent = "No s'ha pogut llegir el repo (" + e.message + '). Torna-ho a provar d\'aquí una estona.';
+      return;
+    }
+    const temes = Object.keys(perTema).sort((a, b) => ordre(a) - ordre(b));
+    const total = Object.values(perTema).reduce((s, l) => s + l.length, 0);
+    document.getElementById('total').textContent = '· ' + total + ' imatges';
+    const cont = document.getElementById('temes');
+    for (const t of temes) {
+      perTema[t].sort((a, b) => a.path.localeCompare(b.path));
+      const b = document.createElement('button'); b.className = 'tema'; b.dataset.t = t;
+      b.innerHTML = t + '<small>' + perTema[t].length + '</small>';
+      b.onclick = () => triaTema(t);
+      cont.appendChild(b);
+    }
+    let guardat = null; try { guardat = localStorage.getItem('galeria-tema'); } catch (e) {}
+    triaTema(perTema[guardat] ? guardat : temes[0]);
+  }
+
+  document.getElementById('cerca').addEventListener('input', pinta);
+  carrega();
+</script>
+</body>
+</html>
