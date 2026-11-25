@@ -73,6 +73,7 @@ function iniciarOpciones() {
     if (sel) sel.value = leerTipusTriat();
     const selP = document.getElementById('selector-prob');
     if (selP) selP.value = leerProbTriada();
+    pintarTemesRepas();
 }
 
 // --- FILTRE PER TIPUS DE PREGUNTA (columna J «TipusPregunta» del Sheet) ---
@@ -107,6 +108,40 @@ function filtrarPorProb(lista) {
     if (triada === 'sensefredes') return lista.filter(q => nivelProb(q) !== 'freda');
     return lista;
 }
+// --- FILTRE PER TEMA (només Repàs Intel·ligent) ---
+// Llista d'ids separats per comes ("te15,te16"). Buit = tots els temes (el comportament de sempre).
+const CLAVE_TEMES_REPAS = CLAVE_OPCION + 'temesRepas';
+function leerTemesRepas() {
+    let v = '';
+    try { v = localStorage.getItem(CLAVE_TEMES_REPAS) || ''; } catch (e) {}
+    const valids = new Set([...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id));
+    return v.split(',').map(s => s.trim()).filter(id => valids.has(id));
+}
+function guardarTemesRepas(lista) {
+    try { localStorage.setItem(CLAVE_TEMES_REPAS, lista.join(',')); } catch (e) {}
+    pintarTemesRepas();
+}
+function alternarTemaRepas(id) {
+    const set = new Set(leerTemesRepas());
+    if (set.has(id)) set.delete(id); else set.add(id);
+    const ordre = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id);
+    guardarTemesRepas(ordre.filter(t => set.has(t)));
+}
+function netejarTemesRepas() { guardarTemesRepas([]); }
+function pintarTemesRepas() {
+    const triats = new Set(leerTemesRepas());
+    const xip = t => `<button type="button" class="tr-chip" aria-pressed="${triats.has(t.id)}" title="${t.nombre}" onclick="alternarTemaRepas('${t.id}')">${t.id}</button>`;
+    const gen = document.getElementById('chips-repas-gen');
+    const esp = document.getElementById('chips-repas-esp');
+    if (gen) gen.innerHTML = TEMAS_GENERAL.map(xip).join('');
+    if (esp) esp.innerHTML = TEMAS_ESPECIFICO.map(xip).join('');
+    const resum = document.getElementById('resum-temes-repas');
+    const det = document.getElementById('det-temes-repas');
+    if (resum) resum.textContent = triats.size === 0 ? 'Tots els temes'
+        : `Només ${[...triats].join(', ')}`;
+    if (det) det.classList.toggle('actiu', triats.size > 0);
+}
+
 // Tipus + probabilitat junts (és el que fan servir el repàs i el test ràpid)
 function filtrarEstudio(lista) { return filtrarPorProb(filtrarPorTipus(lista)); }
 function hayFiltroEstudio() { return !!leerTipusTriat() || !!leerProbTriada(); }
@@ -2227,12 +2262,15 @@ async function prepararRepasoInteligente() {
         return alert("Necessites internet per descarregar tot el temari i analitzar-lo.");
     }
 
+    // Filtre de temes: si n'hi ha de marcats, només es carreguen i es repassen aquests (la purga d'orfes
+    // només actua sobre els temes carregats, així que el progrés de la resta no es toca)
+    const temesRepas = leerTemesRepas();
+    const todosLosTemas = temesRepas.length > 0 ? temesRepas : [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id);
+
     const btn = document.getElementById("btn-srs");
     const contenidoOriginal = btn ? btn.innerHTML : "";
-    if(btn) { btn.innerText = "⏳ Analitzant 25 temes..."; btn.disabled = true; }
+    if(btn) { btn.innerText = `⏳ Analitzant ${todosLosTemas.length} ${todosLosTemas.length === 1 ? 'tema' : 'temes'}...`; btn.disabled = true; }
     const restaurarBoto = () => { if(btn) { btn.innerHTML = contenidoOriginal; btn.disabled = false; } };
-
-    const todosLosTemas = [...TEMAS_GENERAL, ...TEMAS_ESPECIFICO].map(t => t.id);
 
     try {
         // Mode estricte: un tema que falla ja no es confon amb un tema sense preguntes
@@ -2283,9 +2321,12 @@ async function prepararRepasoInteligente() {
         }
 
         if (preguntas.length === 0) {
+            const onTemes = temesRepas.length > 0 ? ` a ${temesRepas.join(', ')}` : '';
             alert(hayFiltroTipus
-                ? `No tens res pendent de «${nomFiltreEstudi()}» per avui. Prova traient el filtre.`
-                : "No tens res pendent per avui! Descansa una mica.");
+                ? `No tens res pendent de «${nomFiltreEstudi()}»${onTemes} per avui. Prova traient algun filtre.`
+                : temesRepas.length > 0
+                    ? `No tens res pendent${onTemes} per avui! Prova amb altres temes o torna a tots.`
+                    : "No tens res pendent per avui! Descansa una mica.");
             restaurarBoto();
             return;
         }
