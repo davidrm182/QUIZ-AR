@@ -432,6 +432,16 @@
         .c-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
 
         /* Marcadors en una sola fila: dos "bocates" (càpsules amb vora daurada), un al costat de l'altre */
+        /* Mapa de boles dels simulacres: files de 20 (4x20 al de 80), blocs de 5 per comptar ràpid */
+        .mapa-boles { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px 2px; margin: 8px 0 2px; }
+        .mapa-boles .bola { appearance: none; -webkit-appearance: none; border: 0; padding: 0; margin: 0; height: 13px; background: transparent; cursor: pointer; position: relative; -webkit-tap-highlight-color: transparent; }
+        .mapa-boles .bola:nth-child(5n):not(:nth-child(20n)) { margin-right: 4px; }
+        .mapa-boles .bola::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; box-sizing: border-box; background: var(--line-soft); }
+        .mapa-boles .bola.re::after { background: var(--muted); }
+        .mapa-boles .bola.ok::after { background: var(--ok-line); }
+        .mapa-boles .bola.ko::after { background: var(--ko-line); }
+        .mapa-boles .bola.bl::after { background: transparent; border: 2px solid #E8A01A; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; }
+        .mapa-boles .bola.ac::before { content: ""; position: absolute; left: 50%; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid var(--text); }
         .marcadors { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
         .bocata {
             display: inline-flex; align-items: center; height: 34px; padding: 0 4px;
@@ -1195,7 +1205,7 @@
 
     </div>
 
-    <!-- VERSIÓ 7.2: revisió dels simulacres de l'historial (pregunta per pregunta, amb l'extra en directe) · 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
+    <!-- VERSIÓ 7.3: mapa de boles als simulacres (files de 20, salt directe a les en blanc) · 7.2: revisió dels simulacres de l'historial (pregunta per pregunta, amb l'extra en directe) · 6.4: convocatòria 04/22 + comptador d'exàmens automàtic · 6.3: exàmens oficials (convocatòries anteriors) · 6.2: nou aspecte (Bosc) + tema clar -->
     <script src="motor.js?v=7.3"></script>
 </body>
 
