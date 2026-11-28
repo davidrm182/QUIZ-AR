@@ -1149,6 +1149,7 @@ function mostrarPregunta(){
         <div class="q-top"><span></span><span class="q-tema">${q.tema}</span>${botoOjo}</div>
         <div class="q-prog"><span class="q-num">${indice + 1}<span> / ${preguntas.length}</span></span>${notaHTML}</div>
         <div class="barra"><div style="width:${progreso}%"></div></div>
+        ${htmlMapaBoles()}
         <div class="marcadors">${contadoresHTML}${marcaProb}${infoSRSHTML}</div>
         <p class="q-texto">${q.pregunta}</p>`;
 
@@ -1259,7 +1260,39 @@ function actualizarBotonFav(){
     btn.setAttribute('aria-pressed', existe ? 'true' : 'false');
 }
 
-function anterior(){ if(indice > 0){ indice--; mostrarPregunta(); } }
+// Si surts d'una pregunta d'un simulacre sense contestar-la, queda marcada com a "en blanc"
+function marcarBlancaSiCal() {
+    if (esSimulacroLargo && !respondida && !respuestasDadas[indice]) respuestasDadas[indice] = { blanca: true };
+}
+
+function anterior(){ if(indice > 0){ marcarBlancaSiCal(); indice--; mostrarPregunta(); } }
+
+// --- MAPA DE BOLES (simulacres): totes les preguntes en files de 20, per veure d'un cop d'ull
+// les que has deixat en blanc i saltar-hi tocant la bola. A cegues només diu contestada / en blanc.
+function htmlMapaBoles() {
+    if (!esSimulacroLargo || preguntas.length < 2) return "";
+    let html = "";
+    for (let i = 0; i < preguntas.length; i++) {
+        const r = respuestasDadas[i];
+        let cls = "nv", estat = "sense veure";
+        if (r && r.blanca) { cls = "bl"; estat = "en blanc"; }
+        else if (r) {
+            if (modoCiegas) { cls = "re"; estat = "contestada"; }
+            else { cls = r.acierto ? "ok" : "ko"; estat = r.acierto ? "encert" : "error"; }
+        }
+        if (i === indice) cls += " ac";
+        html += `<button type="button" class="bola ${cls}" onclick="irAPregunta(${i})" aria-label="Pregunta ${i + 1}: ${estat}"></button>`;
+    }
+    return `<div class="mapa-boles" role="group" aria-label="Mapa de preguntes">${html}</div>`;
+}
+
+function irAPregunta(i) {
+    if (i === indice || i < 0 || i >= preguntas.length) return;
+    marcarBlancaSiCal();
+    recalcularContadores();
+    indice = i;
+    mostrarPregunta();
+}
 
 function siguiente(){
     if(!respondida) {
@@ -1278,6 +1311,8 @@ function siguiente(){
 async function final(){
     document.getElementById("pantalla-quiz").classList.add("oculto");
     document.getElementById("pantalla-final").classList.remove("oculto");
+    // Amb el mapa de boles pots saltar preguntes sense haver-les vist: també compten com a "en blanc"
+    if (esSimulacroLargo) preguntas.forEach((q, i) => { if (!respuestasDadas[i]) respuestasDadas[i] = { blanca: true }; });
     recalcularContadores();
 
     // A cegues les respostes es podien canviar fins al final: ara es registren al SRS una sola vegada, les definitives.
